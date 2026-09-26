@@ -618,7 +618,6 @@
 
             showStatusModal("Menganalisis Titik Awal & Akhir...", "Memeriksa validasi kawasan LP2B secara ketat...", true);
 
-            // Ambil titik awal dan titik akhir dari ujung garis
             const ptAwalObj = latLngs[0];
             const ptAkhirObj = latLngs[latLngs.length - 1];
 
@@ -629,7 +628,6 @@
             let isAkhirInLP2B = false;
             let countNearby = 0;
 
-            // Buat area buffer 5 KM di sekitar garis untuk efisiensi render peta pendukung
             const lineCoordinates = latLngs.map(point => [point.lng, point.lat]);
             const line = turf.lineString(lineCoordinates);
             const bufferedSearchZone = turf.buffer(line, 5, { units: 'kilometers' });
@@ -639,7 +637,6 @@
             L.geoJSON(cachedLp2bData, {
                 pane: 'lp2bPane',
                 style: function(feature) {
-                    // Cek apakah titik awal atau titik akhir berada di dalam poligon ini
                     const inAwal = turf.booleanPointInPolygon(turfPtAwal, feature);
                     const inAkhir = turf.booleanPointInPolygon(turfPtAkhir, feature);
 
@@ -675,7 +672,6 @@
                 }
             }).addTo(layerLp2b);
 
-            // Logika Validasi Ketat: Keduanya (Awal & Akhir) HARUS di dalam LP2B
             if (isAwalInLP2B && isAkhirInLP2B) {
                 showStatusModal(
                     "✅ ANALISIS SELESAI: VALID DALAM LP2B", 
