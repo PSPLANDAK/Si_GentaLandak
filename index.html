@@ -8,8 +8,9 @@
     <!-- PUSTAKA PETA LEAFLET CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
-    <!-- PUSTAKA JSZIP UNTUK BACA FILE .ZIP (21 MB) -->
+    <!-- PUSTAKA JSZIP & TURF.JS UNTUK ANALISIS SPASIAL -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
     <style>
         :root {
@@ -36,7 +37,7 @@
             overflow: hidden;
         }
 
-        /* CONTAINER UTAMA (DESKTOP: KIRI-KANAN) */
+        /* CONTAINER UTAMA */
         .app-wrapper {
             display: flex;
             flex-direction: row;
@@ -69,6 +70,38 @@
         #map {
             width: 100%;
             height: 100%;
+        }
+
+        /* MODAL / BANNER PROSES ANALISIS */
+        .status-modal {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            max-width: 90%;
+            border-left: 5px solid var(--primary);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .form-group {
@@ -148,7 +181,6 @@
             font-size: 14px;
         }
 
-        /* GRID PRATINJAU FOTO LOKASI */
         .photo-preview-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -159,7 +191,7 @@
         .photo-preview-item {
             position: relative;
             width: 100%;
-            padding-top: 75%; /* Ratio 4:3 */
+            padding-top: 75%;
             border-radius: 6px;
             overflow: hidden;
             border: 1px solid var(--border);
@@ -190,7 +222,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            line-height: 1;
         }
 
         .btn-submit {
@@ -212,74 +243,34 @@
             background-color: #219653;
         }
 
-        .map-overlay-tip {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 10px 14px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            z-index: 1000;
-            font-size: 12px;
-            max-width: 280px;
-            border-left: 4px solid var(--primary);
-            pointer-events: none;
-        }
-
-        /* ========================================================= */
-        /* MEDIA QUERIES (TAMPILAN KHUSUS MOBILE / HP)               */
-        /* ========================================================= */
+        /* MEDIA QUERIES (MOBILE / HP) */
         @media screen and (max-width: 768px) {
             body, html {
-                overflow: auto; /* Memungkinkan scroll penuh di HP */
+                overflow: auto;
             }
 
             .app-wrapper {
-                flex-direction: column-reverse; /* Peta di atas, Form di bawah */
+                flex-direction: column-reverse;
                 height: auto;
                 min-height: 100vh;
-                overflow: visible;
             }
 
             .sidebar-form {
                 width: 100%;
                 box-shadow: none;
                 padding: 15px;
-                overflow-y: visible;
             }
 
             .map-container {
-                height: 45vh; /* Peta mengambil 45% tinggi layar HP */
-                min-height: 300px;
+                height: 45vh;
+                min-height: 280px;
                 position: sticky;
                 top: 0;
                 z-index: 100;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            }
-
-            .map-overlay-tip {
-                display: none; /* Sembunyikan petunjuk melayang di HP agar tidak mempersempit peta */
-            }
-
-            .dinas-header {
-                gap: 10px !important;
-                padding-bottom: 10px !important;
-                margin-bottom: 15px !important;
-            }
-
-            .dinas-header img {
-                width: 45px !important;
-                height: 55px !important;
-            }
-
-            .dinas-title-container span {
-                font-size: 11.5px !important;
             }
 
             .form-row {
-                grid-template-columns: 1fr; /* Di HP, input berderet vertikal */
-                gap: 0;
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -288,20 +279,19 @@
 
 <div class="app-wrapper">
     
-    <!-- SISI KIRI: BAR FORMULIR -->
+    <!-- SISI KIRI: FORMULIR INPUT -->
     <div class="sidebar-form">
-        <!-- HEADER DINAS RESMI KABUPATEN LANDAK -->
         <div class="dinas-header" style="display: flex; align-items: center; gap: 15px; border-bottom: 3px solid var(--success); padding-bottom: 15px; margin-bottom: 20px;">
-            <img src="Logo Kabupaten Landak.png" alt="Logo Kabupaten Landak" style="width: 55px; height: 65px; display: block; object-fit: contain;" onerror="this.style.display='none'">
+            <img src="Logo Kabupaten Landak.png" alt="Logo Kabupaten Landak" style="width: 55px; height: 65px; object-fit: contain;" onerror="this.style.display='none'">
             
-            <div class="dinas-title-container" style="display: flex; flex-direction: column; justify-content: center; gap: 4px;">
-                <span style="margin: 0; padding: 0; font-size: 13.5px; color: var(--dark); font-weight: bold; text-transform: uppercase; line-height: 1.2; letter-spacing: 0.2px;">Pemerintah Kabupaten Landak</span>
-                <span style="margin: 0; padding: 0; font-size: 13.5px; color: var(--dark); font-weight: bold; text-transform: uppercase; line-height: 1.2; letter-spacing: 0.2px;">Dinas Ketahanan Pangan dan Pertanian</span>
-                <span style="margin: 0; padding: 0; font-size: 13.5px; color: var(--success); font-weight: bold; text-transform: uppercase; line-height: 1.2; letter-spacing: 0.2px;">Pengajuan Jalan Usaha Tani</span>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-size: 13.5px; color: var(--dark); font-weight: bold; text-transform: uppercase;">Pemerintah Kabupaten Landak</span>
+                <span style="font-size: 13.5px; color: var(--dark); font-weight: bold; text-transform: uppercase;">Dinas Ketahanan Pangan dan Pertanian</span>
+                <span style="font-size: 13.5px; color: var(--success); font-weight: bold; text-transform: uppercase;">Pengajuan Jalan Usaha Tani</span>
             </div>
         </div>
         
-        <form id="mainForm" onsubmit="event.preventDefault(); prosesValidasi();">
+        <form id="mainForm" onsubmit="event.preventDefault(); prosesValidasiDanAnalisis();">
             <div class="form-group">
                 <label>Nama Kelompok Tani (Poktan)</label>
                 <input type="text" id="nama_poktan" placeholder="Contoh: Tani Subur Makmur" required>
@@ -340,11 +330,10 @@
                 </div>
             </div>
 
-            <!-- INPUT KOORDINAT MANUAL -->
+            <!-- INPUT KOORDINAT -->
             <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
-            
             <label style="color: var(--primary);">📍 Input Koordinat Jalan (Manual)</label>
-            <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 10px 0;">Masukkan titik desimal koordinat rute rencana jalan (Format: 109.xxxx).</p>
+            <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 10px 0;">Format desimal: Lat (Y), Lon (X: 109.xxxx)</p>
 
             <div class="form-row">
                 <div class="form-group">
@@ -368,27 +357,21 @@
                 </div>
             </div>
 
-            <button type="button" class="btn-preview" onclick="plotKePeta()">👁️ Plot Rute ke Peta</button>
+            <button type="button" class="btn-preview" onclick="plotKePeta()">👁️ Tampilkan Rute di Peta</button>
 
-            <!-- SECTION UPLOAD FOTO 1: FOTO SAWAH -->
+            <!-- UPLOAD FOTO SAWAH -->
             <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
             <div class="form-group">
                 <label style="color: var(--primary);">🌾 Foto Lahan Sawah / Hamparan (Maks. 2 Foto)</label>
-                <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 8px 0;">Pilih hingga 2 file foto kondisi lahan sawah/hamparan.</p>
                 <input type="file" id="foto_sawah_input" accept="image/*" multiple onchange="handleFotoUpload(this, 'sawah')">
-                
-                <!-- KOTAK PRATINJAU FOTO SAWAH -->
                 <div id="previewSawahGrid" class="photo-preview-grid"></div>
             </div>
 
-            <!-- SECTION UPLOAD FOTO 2: FOTO RENCANA JALAN -->
+            <!-- UPLOAD FOTO JALAN -->
             <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
             <div class="form-group">
                 <label style="color: var(--primary);">🛣️ Foto Lokasi Rencana Jalan (Maks. 2 Foto)</label>
-                <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 8px 0;">Pilih hingga 2 file foto lokasi yang akan dibangun jalan.</p>
                 <input type="file" id="foto_jalan_input" accept="image/*" multiple onchange="handleFotoUpload(this, 'jalan')">
-                
-                <!-- KOTAK PRATINJAU FOTO JALAN -->
                 <div id="previewJalanGrid" class="photo-preview-grid"></div>
             </div>
 
@@ -399,107 +382,54 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn-submit">Kirim Berkas & Analisis</button>
+            <button type="submit" id="btnSubmit" class="btn-submit">🚀 Kirim Berkas & Analisis LP2B</button>
         </form>
     </div>
 
-    <!-- SISI KANAN: PETA PENUH -->
+    <!-- SISI KANAN: PETA -->
     <div class="map-container">
-        <div class="map-overlay-tip">
-            <b>Petunjuk:</b><br>
-            Ketik koordinat awal dan akhir di formulir kiri, lalu klik tombol <b>Plot Rute ke Peta</b> untuk melihat simulasi penarikan garis.
+        <div id="statusModal" class="status-modal">
+            <div id="statusSpinner" class="spinner"></div>
+            <div style="display: flex; flex-direction: column;">
+                <span id="statusTitle" style="font-size: 13px; font-weight: bold; color: var(--dark);">Memproses Analisis LP2B...</span>
+                <span id="statusSub" style="font-size: 11px; color: #666;">Harap tunggu sebentar</span>
+            </div>
         </div>
         <div id="map"></div>
     </div>
 
 </div>
 
-<!-- PUSTAKA LEAFLET JS -->
+<!-- LEAFLET JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // Penampung file foto terpisah
     let photosSawah = [];
     let photosJalan = [];
+    let cachedLp2bData = null; // Menyimpan cache GeoJSON setelah didownload
 
-    // 1. Inisialisasi Peta
-    const map = L.map('map', { zoomControl: false }).setView([0.3847, 109.9532], 12);
+    // 1. Inisialisasi Peta Standar (Kawasan Kab. Landak)
+    const map = L.map('map', { zoomControl: false }).setView([0.3847, 109.9532], 11);
 
-    // 2. Custom Pane untuk mengontrol urutan layer
     map.createPane('lp2bPane');
     map.getPane('lp2bPane').style.zIndex = 400;
 
     map.createPane('rutePane');
     map.getPane('rutePane').style.zIndex = 600;
 
-    // 3. Tile Layer Basemap (Esri World Imagery)
-    L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: 'Tiles © Esri' }
-    ).addTo(map);
+    // Basemap Citra Satelit Esri
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri'
+    }).addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // 4. Feature Group Rute
     const layerRute = new L.FeatureGroup({ pane: 'rutePane' }).addTo(map);
+    const layerLp2b = new L.FeatureGroup({ pane: 'lp2bPane' }).addTo(map);
 
-    // 5. Memuat GeoJSON LP2B Langsung dari File ZIP (21 MB)
-    async function loadGeoJsonFromZip() {
-        try {
-            const response = await fetch("lp2b_indonesia.zip"); 
-            if (!response.ok) throw new Error("File ZIP tidak ditemukan!");
+    window.addEventListener('resize', () => map.invalidateSize());
 
-            const zipData = await response.arrayBuffer();
-            const zip = await JSZip.loadAsync(zipData);
-            
-            // Mengambil file GeoJSON pertama di dalam ZIP
-            const fileName = Object.keys(zip.files)[0]; 
-            const jsonText = await zip.file(fileName).async("text");
-            const loadedData = JSON.parse(jsonText);
-
-            const lp2bLayer = L.geoJSON(loadedData, {
-                pane: 'lp2bPane',
-                style: { 
-                    color: "#2ecc71", 
-                    weight: 2, 
-                    fillColor: "#27ae60", 
-                    fillOpacity: 0.45 
-                },
-                onEachFeature: function (feature, layer) {
-                    let info = "";
-                    if (feature.properties) {
-                        const desa = feature.properties.WADMKD || feature.properties.desa;
-                        const kec = feature.properties.WADMKC || feature.properties.kecamatan;
-                        const kab = feature.properties.WADMKK || feature.properties.kabupaten;
-
-                        if (kab) info += "<b>Kabupaten:</b> " + kab + "<br>";
-                        if (kec) info += "<b>Kecamatan:</b> " + kec + "<br>";
-                        if (desa) info += "<b>Desa:</b> " + desa + "<br>";
-                    }
-                    if (info !== "") layer.bindPopup(info);
-                }
-            }).addTo(map);
-
-            if (lp2bLayer.getLayers().length > 0) {
-                map.fitBounds(lp2bLayer.getBounds(), { padding: [30, 30] });
-            }
-        } catch (err) {
-            console.error("Gagal memuat GeoJSON dari ZIP:", err);
-        }
-    }
-
-    loadGeoJsonFromZip();
-
-    // Memastikan peta ter-render ulang saat layar di-resize
-    window.addEventListener('resize', () => {
-        map.invalidateSize();
-    });
-
-    setTimeout(() => {
-        map.invalidateSize();
-    }, 500);
-
-    // 6. Fungsi Plot Rute
+    // 2. Fungsi Plot Rute Manual di Peta
     function plotKePeta() {
         layerRute.clearLayers();
 
@@ -512,8 +442,8 @@
             const titikAwal = L.latLng(latAwal, lonAwal);
             const titikAkhir = L.latLng(latAkhir, lonAkhir);
 
-            L.marker(titikAwal, { pane: 'rutePane' }).addTo(layerRute).bindPopup("Titik Awal");
-            L.marker(titikAkhir, { pane: 'rutePane' }).addTo(layerRute).bindPopup("Titik Akhir");
+            L.marker(titikAwal, { pane: 'rutePane' }).addTo(layerRute).bindPopup("Titik Awal Rute");
+            L.marker(titikAkhir, { pane: 'rutePane' }).addTo(layerRute).bindPopup("Titik Akhir Rute");
 
             const garis = L.polyline([titikAwal, titikAkhir], { 
                 pane: 'rutePane',
@@ -524,40 +454,139 @@
             if (titikAwal.equals(titikAkhir)) {
                 map.setView(titikAwal, 15);
             } else {
-                map.fitBounds(garis.getBounds(), { padding: [30, 30] });
+                map.fitBounds(garis.getBounds(), { padding: [40, 40] });
             }
 
             const jarak = titikAwal.distanceTo(titikAkhir);
-            const teksJarak = jarak >= 1000 
+            document.getElementById('lbl-panjang').innerText = jarak >= 1000 
                 ? (jarak / 1000).toFixed(2) + " km" 
                 : jarak.toFixed(2) + " meter";
 
-            document.getElementById('lbl-panjang').innerText = teksJarak;
-
-            // Scroll otomatis ke posisi peta di HP setelah tombol Plot ditekan
             if (window.innerWidth <= 768) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         } else {
-            alert("Harap isi seluruh koordinat Latitude dan Longitude dengan benar!");
+            alert("Harap isi seluruh koordinat Latitude dan Longitude terlebih dahulu!");
         }
     }
 
-    // 7. FUNGSI UNTUK MENGELOLA DUA KATEGORI UPLOAD FOTO (SAWAH & JALAN)
+    // 3. FUNGSI UTAMA: PROSES KIRIM BERKAS DAN ANALISIS SPASIAL LP2B
+    async function prosesValidasiDanAnalisis() {
+        const latAwal = parseFloat(document.getElementById('lat_awal').value);
+        const lonAwal = parseFloat(document.getElementById('lon_awal').value);
+        const latAkhir = parseFloat(document.getElementById('lat_akhir').value);
+        const lonAkhir = parseFloat(document.getElementById('lon_akhir').value);
+
+        if (isNaN(latAwal) || isNaN(lonAwal) || isNaN(latAkhir) || isNaN(lonAkhir)) {
+            alert("Isi koordinat dengan benar terlebih dahulu!");
+            return;
+        }
+
+        // Tampilkan Rute di Peta jika belum
+        plotKePeta();
+
+        // Tampilkan Modal/Banner Loading
+        showStatusModal("Mengekstrak Data LP2B...", "Mohon tunggu, sedang melakukan kroscek spasial", true);
+
+        try {
+            // Cek apakah data GeoJSON LP2B sudah tersimpan di cache memori
+            if (!cachedLp2bData) {
+                const response = await fetch("lp2b_indonesia.zip");
+                if (!response.ok) throw new Error("File LP2B tidak ditemukan");
+
+                const zipData = await response.arrayBuffer();
+                const zip = await JSZip.loadAsync(zipData);
+                const fileName = Object.keys(zip.files)[0];
+                const jsonText = await zip.file(fileName).async("text");
+                cachedLp2bData = JSON.parse(jsonText);
+            }
+
+            showStatusModal("Menganalisis Keterkaitan LP2B...", "Memeriksa tumpang tindih lokasi...", true);
+
+            // Buat objek garis dengan Turf.js untuk analisis spasial
+            const line = turf.lineString([[lonAwal, latAwal], [lonAkhir, latAkhir]]);
+            
+            let isInsideLp2b = false;
+            let countIntersect = 0;
+
+            layerLp2b.clearLayers();
+
+            // Lakukan kalkulasi spasial cepat
+            L.geoJSON(cachedLp2bData, {
+                pane: 'lp2bPane',
+                style: {
+                    color: "#2ecc71",
+                    weight: 2,
+                    fillColor: "#27ae60",
+                    fillOpacity: 0.5
+                },
+                filter: function(feature) {
+                    // Hanya render poligon LP2B yang bersinggungan / dekat dengan rute jalan saja
+                    try {
+                        const intersects = turf.booleanIntersects(line, feature);
+                        if (intersects) {
+                            isInsideLp2b = true;
+                            countIntersect++;
+                            return true;
+                        }
+                    } catch (e) {
+                        return false;
+                    }
+                    return false;
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.bindPopup("<b>LOKASI TERMASUK KAWASAN LP2B</b>");
+                }
+            }).addTo(layerLp2b);
+
+            // Tampilkan Hasil Analisis
+            if (isInsideLp2b) {
+                showStatusModal(
+                    "✅ ANALISIS SELESAI: MASUK KAWASAN LP2B", 
+                    `Rencana jalan beririsan dengan ${countIntersect} area Lahan Pertanian Pangan Berkelanjutan (LP2B).`, 
+                    false, 
+                    "var(--success)"
+                );
+            } else {
+                showStatusModal(
+                    "ℹ️ ANALISIS SELESAI: DILUAR LP2B", 
+                    "Lokasi rencana jalan berada di luar kawasan LP2B.", 
+                    false, 
+                    "var(--primary)"
+                );
+            }
+
+        } catch (err) {
+            console.error(err);
+            showStatusModal("⚠️ Gagal Mengakses Data LP2B", "Pastikan file lp2b_indonesia.zip ada di repositori.", false, "var(--danger)");
+        }
+    }
+
+    function showStatusModal(title, sub, isLoading, borderColor = "var(--primary)") {
+        const modal = document.getElementById('statusModal');
+        const spinner = document.getElementById('statusSpinner');
+        
+        document.getElementById('statusTitle').innerText = title;
+        document.getElementById('statusSub').innerText = sub;
+        modal.style.borderLeftColor = borderColor;
+        
+        spinner.style.display = isLoading ? 'block' : 'none';
+        modal.style.display = 'flex';
+    }
+
+    // 4. Pengelola File Foto Preview
     function handleFotoUpload(input, kategori) {
         const files = Array.from(input.files);
         const targetArray = (kategori === 'sawah') ? photosSawah : photosJalan;
 
         if (files.length + targetArray.length > 2) {
-            alert(`Maksimal foto ${kategori === 'sawah' ? 'lahan sawah' : 'lokasi jalan'} adalah 2 foto.`);
+            alert(`Maksimal foto adalah 2 foto.`);
             input.value = "";
             return;
         }
 
         files.forEach(file => {
-            if (targetArray.length < 2) {
-                targetArray.push(file);
-            }
+            if (targetArray.length < 2) targetArray.push(file);
         });
 
         input.value = "";
@@ -566,9 +595,7 @@
 
     function renderPhotoPreview(kategori) {
         const targetArray = (kategori === 'sawah') ? photosSawah : photosJalan;
-        const gridId = (kategori === 'sawah') ? 'previewSawahGrid' : 'previewJalanGrid';
-        const grid = document.getElementById(gridId);
-        
+        const grid = document.getElementById((kategori === 'sawah') ? 'previewSawahGrid' : 'previewJalanGrid');
         grid.innerHTML = "";
 
         targetArray.forEach((file, index) => {
@@ -587,19 +614,9 @@
     }
 
     function hapusFoto(index, kategori) {
-        if (kategori === 'sawah') {
-            photosSawah.splice(index, 1);
-        } else {
-            photosJalan.splice(index, 1);
-        }
+        if (kategori === 'sawah') photosSawah.splice(index, 1);
+        else photosJalan.splice(index, 1);
         renderPhotoPreview(kategori);
-    }
-
-    // 8. Fungsi Kirim/Validasi Form
-    function prosesValidasi() {
-        alert(`Data pengajuan berhasil dikirim!\n` +
-              `- Foto Lahan Sawah: ${photosSawah.length} foto\n` +
-              `- Foto Rencana Jalan: ${photosJalan.length} foto`);
     }
 </script>
 
