@@ -162,7 +162,7 @@
             margin-bottom: 5px;
         }
 
-        input {
+        input, select {
             padding: 10px 12px;
             border: 1px solid var(--border);
             border-radius: 6px;
@@ -178,7 +178,7 @@
             cursor: pointer;
         }
 
-        input:focus {
+        input:focus, select:focus {
             border-color: var(--success);
             background-color: #fff;
             outline: none;
@@ -348,11 +348,15 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Kecamatan</label>
-                    <input type="text" id="kecamatan" placeholder="Misal: Ngabang" required>
+                    <select id="kecamatan" onchange="updateDesaList()" required>
+                        <option value="">-- Pilih Kecamatan --</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Desa</label>
-                    <input type="text" id="desa" placeholder="Misal: Hilir Tengah" required>
+                    <select id="desa" required>
+                        <option value="">-- Pilih Desa --</option>
+                    </select>
                 </div>
             </div>
             
@@ -461,6 +465,23 @@
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
 <script>
+    // DATA WILAYAH KABUPATEN LANDAK (13 KECAMATAN & DESA)
+    const wilayahLandak = {
+        "Air Besar": ["Bentiang", "Dango Aji", "Engkadik", "Engkangin", "Jambu Tembawang", "Merayuh", "Nyari", "Parek", "Sekendal", "Sempatung Lawek", "Semuntik", "Sepangah", "Serimbu", "Tenguwe", "Temoyok", "Tengon Pelaik"],
+        "Banyuke Hulu": ["Gamang", "Kampet", "Padang Pio", "Ringo Lojok", "Semade", "Tembawang Bale", "Untang"],
+        "Jelimpo": ["Angan Tembawang", "Balai Peluntan", "Dara Itam I", "Jelimpo", "Kayu Ara", "Kersik Belantian", "Mandor Kiru", "Nyiin", "Papung", "Pawis Hilir", "Sekais", "Temahar", "Tubang Raeng"],
+        "Kuala Behe": ["Angkanyar", "Bengawan Ampar", "Kedama", "Kuala Behe", "Nyayum", "Paku Raya", "Permiit", "Sehe Lusur", "Sejowet", "Semedang", "Tanjung Balai"],
+        "Mandor": ["Bebatung", "Kayu Ara", "Kayu Tanam", "Keramas", "Kerohok", "Mandor", "Manggang", "Mengkunyit", "Ngarak", "Pongok", "Salatiga", "Sebadu", "Sekilap", "Selutung", "Semenok", "Simpang Kasturi", "Sumsum"],
+        "Mempawah Hulu": ["Ansolok", "Babatn", "Bilayuk", "Caokng", "Garu", "Karangan", "Mentonyek", "Pahokng", "Parigi", "Sabaka", "Sailo", "Sala'as", "Salumang", "Sampuro", "Sungai Laki", "Tiang Tanjung", "Tunang"],
+        "Menjalin": ["Bengkawe", "Lamoanak", "Menjalin", "Nangka", "Raba", "Re'es", "Sepahat", "Tempoak"],
+        "Menyuke": ["Angkaras", "Anik Dingir", "Ansang", "Bagak", "Berinang Mayun", "Darit", "Kayu Ara", "Ladangan", "Lintah Betung", "Mamek", "Ongkol Padang", "Sidan", "Songga", "Sungai Lubang", "Ta'as", "Tolok"],
+        "Meranti": ["Ampadi", "Kelampai", "Setolo", "Meranti", "Moro Betung", "Selange", "Tahu"],
+        "Ngabang": ["Amang", "Ambarang", "Amboyo", "Amboyo Inti", "Amboyo Selatan", "Antan Raya", "Engkadu", "Hilir Kantor", "Hilir Tengah", "Munggu", "Muun", "Pak Mayam", "Penyaho", "Dangku", "Raja", "Rasan", "Sebirang", "Sungai Keli", "Tebedak"],
+        "Sebangki": ["Agak", "Kumpang", "Tengah", "Rantau Panjang", "Sebangki", "Sungai Segak"],
+        "Sengah Temila": ["Andeng", "Aur Sampuk", "Banying", "Gombang", "Keranji Mancang", "Keranji Paidang", "Pahauman", "Paloan", "Rabak", "Saham", "Sebatih", "Senakin", "Sidas", "Tonang"],
+        "Sompak": ["Amawakng", "Galar", "Lingkonong", "Pakumbang", "Pauh", "Sompak", "Tapakng"]
+    };
+
     let photosSawah = [];
     let photosJalan = [];
     let cachedLp2bData = null; 
@@ -469,6 +490,37 @@
 
     // URL Web App Google Apps Script Anda
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5iubPB-9Zy5vhP-7_qgqo7G3svuZ-6ASFvTe8rR9VAgsZZbKTSuIQJW3-U7Tf6W9I/exec";
+
+    // Inisialisasi Pilihan Kecamatan pada saat halaman dimuat
+    window.addEventListener('DOMContentLoaded', () => {
+        const selectKecamatan = document.getElementById('kecamatan');
+        const sortedKecamatan = Object.keys(wilayahLandak).sort();
+        
+        sortedKecamatan.forEach(kec => {
+            const opt = document.createElement('option');
+            opt.value = kec;
+            opt.textContent = kec;
+            selectKecamatan.appendChild(opt);
+        });
+    });
+
+    // Fungsi Update List Desa Berdasarkan Kecamatan yang Dipilih
+    function updateDesaList() {
+        const kecSelected = document.getElementById('kecamatan').value;
+        const selectDesa = document.getElementById('desa');
+        
+        selectDesa.innerHTML = '<option value="">-- Pilih Desa --</option>';
+        
+        if (kecSelected && wilayahLandak[kecSelected]) {
+            const sortedDesa = wilayahLandak[kecSelected].sort();
+            sortedDesa.forEach(desa => {
+                const opt = document.createElement('option');
+                opt.value = desa;
+                opt.textContent = desa;
+                selectDesa.appendChild(opt);
+            });
+        }
+    }
 
     // 1. Inisialisasi Peta
     const map = L.map('map', { zoomControl: false }).setView([0.3847, 109.9532], 11);
@@ -641,7 +693,6 @@
                 pane: 'lp2bPane',
                 filter: function(feature) {
                     try {
-                        // Hanya ambil poligon yang beririsan dengan zona radius 5 km dari rute
                         return turf.booleanIntersects(bufferedSearchZone, feature);
                     } catch (e) {
                         return false;
