@@ -8,6 +8,9 @@
     <!-- PUSTAKA PETA LEAFLET CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
+    <!-- PUSTAKA JSZIP UNTUK BACA FILE .ZIP (21 MB) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <style>
         :root {
             --primary: #1e3799;
@@ -295,27 +298,20 @@
     // 4. Feature Group Rute
     const layerRute = new L.FeatureGroup({ pane: 'rutePane' }).addTo(map);
 
-    // 5. Fungsi Memuat GeoJSON dengan Fallback Link
-    const geojsonUrls = [
-        "https://cdn.jsdelivr.net/gh/andrimegi325-cyber/web-jalan-tani@v1.0/lp2b_indonesia.geojson",
-        "https://github.com/andrimegi325-cyber/web-jalan-tani/releases/download/v1.0/lp2b_indonesia.geojson"
-    ];
+    // 5. Memuat GeoJSON LP2B Langsung dari File ZIP (21 MB)
+    async function loadGeoJsonFromZip() {
+        try {
+            const response = await fetch("lp2b_indonesia.zip"); 
+            if (!response.ok) throw new Error("File ZIP tidak ditemukan!");
 
-    async function loadGeoJson() {
-        let loadedData = null;
-        for (const url of geojsonUrls) {
-            try {
-                const res = await fetch(url);
-                if (res.ok) {
-                    loadedData = await res.json();
-                    break;
-                }
-            } catch (e) {
-                console.warn("Gagal memuat dari " + url + ", mencoba URL cadangan...", e);
-            }
-        }
+            const zipData = await response.arrayBuffer();
+            const zip = await JSZip.loadAsync(zipData);
+            
+            // Mengambil file GeoJSON pertama di dalam ZIP
+            const fileName = Object.keys(zip.files)[0]; 
+            const jsonText = await zip.file(fileName).async("text");
+            const loadedData = JSON.parse(jsonText);
 
-        if (loadedData) {
             const lp2bLayer = L.geoJSON(loadedData, {
                 pane: 'lp2bPane',
                 style: { 
@@ -342,12 +338,12 @@
             if (lp2bLayer.getLayers().length > 0) {
                 map.fitBounds(lp2bLayer.getBounds(), { padding: [30, 30] });
             }
-        } else {
-            console.error("Gagal memuat GeoJSON LP2B dari seluruh sumber.");
+        } catch (err) {
+            console.error("Gagal memuat GeoJSON dari ZIP:", err);
         }
     }
 
-    loadGeoJson();
+    loadGeoJsonFromZip();
 
     setTimeout(() => {
         map.invalidateSize();
