@@ -112,36 +112,37 @@
             background-color: #0c2461;
         }
 
-        /* WIDGET WHATSAPP DI ATAS TOMBOL ZOOM (TANPA NOMOR) */
-        .wa-call-center {
+        /* WIDGET FLOATING DI ATAS TOMBOL ZOOM (DI KANAN BAWAH) */
+        .map-floating-widgets {
             position: absolute;
             bottom: 95px;
             right: 20px;
             z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .widget-btn {
             background: rgba(255, 255, 255, 0.95);
             padding: 8px 12px;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             display: flex;
             align-items: center;
-        }
-
-        .wa-call-center a {
-            background-color: #25d366;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            text-decoration: none;
+            gap: 8px;
+            font-size: 12.5px;
             font-weight: bold;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: background 0.2s;
+            text-decoration: none;
+            color: var(--dark);
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+            cursor: pointer;
         }
 
-        .wa-call-center a:hover {
-            background-color: #128c7e;
+        .widget-btn:hover {
+            background: #f1f2f6;
+            color: var(--primary);
         }
 
         .status-modal {
@@ -345,7 +346,7 @@
                 width: calc(100% - 20px);
             }
 
-            .wa-call-center {
+            .map-floating-widgets {
                 bottom: 85px;
                 right: 10px;
             }
@@ -483,10 +484,21 @@
             <button type="button" onclick="cariLokasi()">🔍 Cari</button>
         </div>
 
-        <!-- WIDGET CALL CENTER WHATSAPP (TANPA NOMOR) -->
-        <div class="wa-call-center">
-            <a href="https://wa.me/6282254683173?text=Halo%20Admin,%20saya%20ingin%20bertanya%20terkait%20pengajuan%20JUT%20Kab.%20Landak" target="_blank">
-                💬 Hubungi Call Center WA
+        <!-- WIDGET FLOATING DI ATAS TOMBOL ZOOM -->
+        <div class="map-floating-widgets">
+            <!-- Tombol Buka Spreadsheet (Proteksi Password) -->
+            <button class="widget-btn" onclick="aksesFileProtected('spreadsheet', 'https://docs.google.com/spreadsheets/d/1ZMOZnXIG-tBZM0iVBNl2_IlZQtNmhh5LnLtnF3ASVGA/edit?gid=0#gid=0')">
+                📊 Spreadsheet
+            </button>
+
+            <!-- Tombol Buka Google Drive (Proteksi Password) -->
+            <button class="widget-btn" onclick="aksesFileProtected('drive', 'https://drive.google.com/drive/folders/1tKKs5Vm4qxybAvv_T0XuHnsAi5QGwQK7')">
+                📁 Google Drive
+            </button>
+
+            <!-- Tombol Call Center WhatsApp (Minimalis Logo Telepon) -->
+            <a href="https://wa.me/6282254683173?text=Halo%20Admin,%20saya%20ingin%20bertanya%20terkait%20pengajuan%20JUT%20Kab.%20Landak" target="_blank" class="widget-btn" style="color: #27ae60;">
+                📞 Call Center WA
             </a>
         </div>
 
@@ -534,6 +546,20 @@
 
     // URL Web App Google Apps Script Anda
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5iubPB-9Zy5vhP-7_qgqo7G3svuZ-6ASFvTe8rR9VAgsZZbKTSuIQJW3-U7Tf6W9I/exec";
+
+    // Fungsi Proteksi Password untuk Spreadsheet & Drive
+    function aksesFileProtected(jenis, urlTujuan) {
+        const passwordInput = prompt(`🔒 Masukkan Password Administrator untuk mengakses ${jenis.toUpperCase()}:`);
+        
+        if (passwordInput === null) return; // Jika dibatalkan
+
+        if (passwordInput === "Admin123") {
+            alert(`✅ Password Benar! Membuka ${jenis}...`);
+            window.open(urlTujuan, '_blank');
+        } else {
+            alert("❌ Password Salah! Akses ditolak.");
+        }
+    }
 
     // Inisialisasi Pilihan Kecamatan pada saat halaman dimuat
     window.addEventListener('DOMContentLoaded', () => {
