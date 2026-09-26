@@ -55,13 +55,14 @@
             z-index: 99999;
             transition: opacity 0.5s ease;
             gap: 20px;
+            padding: 20px;
         }
 
         .splash-title {
-            font-size: 36px; /* Ukuran diperbesar */
+            font-size: 32px;
             font-weight: 900;
             color: #27ae60; /* Warna disamakan dengan nuansa hijau daun pada logo */
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             text-transform: uppercase;
             text-align: center;
             animation: kedipTeks 1s infinite alternate; /* Efek kedip/berdenyut */
@@ -74,8 +75,9 @@
         }
 
         #splash-screen img {
-            width: 350px;
-            height: auto;
+            width: 85%;          /* Fleksibel mengikuti lebar layar HP */
+            max-width: 350px;    /* Batas maksimal di laptop/PC */
+            height: auto;        /* Menjaga proporsi gambar agar tidak terpotong */
             object-fit: contain;
             animation: pulseLogo 1s infinite alternate;
         }
@@ -461,7 +463,7 @@
 </head>
 <body>
 
-<!-- SPLASH SCREEN DENGAN TEKS BESAR, WARNA SELARAS LOGO, DAN EFEK KEDIP -->
+<!-- SPLASH SCREEN RESPONSIF DENGAN EFEK KEDIP -->
 <div id="splash-screen">
     <div class="splash-title">SELAMAT DATANG</div>
     <img src="Logo Home.png" alt="Logo Home" onerror="this.style.display='none'">
