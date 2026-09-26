@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Informasi Geografis Pengajuan JUT & Horti - Kab. Landak</title>
+    
+    <!-- PUSTAKA PETA LEAFLET CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            --primary: #1e3799;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --bg-side: #ffffff;
+            --bg-main: #f8f9fa;
+            --border: #dcdde1;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-main);
+            overflow: hidden;
+        }
+
+        .app-wrapper {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* KOLOM KIRI: FORMULIR INPUT */
+        .sidebar-form {
+            width: 450px;
+            background-color: var(--bg-side);
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            padding: 25px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        /* KOLOM KANAN: PETA PENUH */
+        .map-container {
+            flex: 1;
+            position: relative;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 13px;
+            color: #4b5563;
+            margin-bottom: 5px;
+        }
+
+        input {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13.5px;
+            background-color: #fafafa;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            border-color: var(--success);
+            background-color: #fff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+        }
+
+        .btn-preview {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            transition: background 0.2s;
+        }
+
+        .btn-preview:hover {
+            background-color: #0c2461;
+        }
+
+        .summary-card {
+            background-color: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 5px;
+            margin-bottom: 20px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .btn-submit {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+            box-shadow: 0 4px 10px rgba(39,174,96,0.2);
+        }
+
+        .btn-submit:hover {
+            background-color: #219653;
+        }
+
+        .map-overlay-tip {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: white;
+            padding: 12px 18px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            z-index: 1000;
+            font-size: 12.5px;
+            max-width: 320px;
+            border-left: 4px solid var(--primary);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+    
+    <!-- SISI KIRI: BAR FORMULIR -->
+    <div class="sidebar-form">
+        <!-- HEADER DINAS RESMI KABUPATEN LANDAK -->
+        <div class="dinas-header" style="display: flex; align-items: center; gap: 15px; border-bottom: 3px solid var(--success); padding-bottom: 15px; margin-bottom: 20px;">
+            <img src="Logo Kabupaten Landak.png" alt="Logo Kabupaten Landak" style="width: 55px; height: 65px; display: block; object-fit: contain;" onerror="this.style.display='none'">
+            
+            <div class="dinas-title-container" style="display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                <span style="margin: 0; padding: 0; font-size: 13.5px; color: var(--dark); font-weight: bold; text-transform: uppercase; line-height: 1.2; letter-spacing: 0.2px;">Pemerintah Kabupaten Landak</span>
+                <span style="margin: 0; padding: 0; font-size: 13.5px; color: var(--dark); font-weight: bold; text-transform: uppercase; line-height: 1.2; letter-spacing: 0.2px;">Dinas Ketahanan Pangan dan Pertanian</span>
+                <span style="margin: 0; padding: 0; font-size: 13.5px; color: var(--success); font-weight: bold; text-transform: uppercase; line-height: 1.2; letter-spacing: 0.2px;">Pengajuan Jalan Usaha Tani</span>
+            </div>
+        </div>
+        
+        <form id="mainForm" onsubmit="event.preventDefault(); prosesValidasi();">
+            <div class="form-group">
+                <label>Nama Kelompok Tani (Poktan)</label>
+                <input type="text" id="nama_poktan" placeholder="Contoh: Tani Subur Makmur" required>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Kecamatan</label>
+                    <input type="text" id="kecamatan" placeholder="Misal: Ngabang" required>
+                </div>
+                <div class="form-group">
+                    <label>Desa</label>
+                    <input type="text" id="desa" placeholder="Misal: Hilir Tengah" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nama Ketua Poktan</label>
+                    <input type="text" id="nama_ketua" required>
+                </div>
+                <div class="form-group">
+                    <label>NIK Ketua</label>
+                    <input type="text" id="nik" maxlength="16" required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Jumlah Anggota (Orang)</label>
+                    <input type="number" id="jumlah_anggota" required min="1">
+                </div>
+                <div class="form-group">
+                    <label>Luas Hamparan (Hektar)</label>
+                    <input type="number" step="0.01" id="luas_lahan" required>
+                </div>
+            </div>
+
+            <!-- INPUT KOORDINAT MANUAL -->
+            <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
+            
+            <label style="color: var(--primary);">📍 Input Koordinat Jalan (Manual)</label>
+            <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 10px 0;">Masukkan titik desimal koordinat rute rencana jalan (Format: 109.xxxx).</p>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Latitude Awal (Y)</label>
+                    <input type="number" step="0.000001" id="lat_awal" placeholder="Contoh: 0.3847" required>
+                </div>
+                <div class="form-group">
+                    <label>Longitude Awal (X)</label>
+                    <input type="number" step="0.000001" id="lon_awal" placeholder="Contoh: 109.9532" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Latitude Akhir (Y)</label>
+                    <input type="number" step="0.000001" id="lat_akhir" placeholder="Contoh: 0.3895" required>
+                </div>
+                <div class="form-group">
+                    <label>Longitude Akhir (X)</label>
+                    <input type="number" step="0.000001" id="lon_akhir" placeholder="Contoh: 109.9588" required>
+                </div>
+            </div>
+
+            <button type="button" class="btn-preview" onclick="plotKePeta()">👁️ Plot Rute ke Peta</button>
+
+            <div class="summary-card">
+                <div class="summary-item">
+                    <label>📏 Jarak Garis Lurus:</label>
+                    <span id="lbl-panjang" style="color: var(--success); font-size: 15px; font-weight: bold;">0 meter</span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Kirim Berkas & Analisis</button>
+        </form>
+    </div>
+
+    <!-- SISI KANAN: PETA PENUH -->
+    <div class="map-container">
+        <div class="map-overlay-tip">
+            <b>Petunjuk:</b><br>
+            Ketik koordinat awal dan akhir di formulir kiri, lalu klik tombol <b>Plot Rute ke Peta</b> untuk melihat simulasi penarikan garis.
+        </div>
+        <div id="map"></div>
+    </div>
+
+</div>
+
+<!-- PUSTAKA LEAFLET JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // 1. Inisialisasi Peta
+    const map = L.map('map', { zoomControl: false }).setView([0.3847, 109.9532], 12);
+
+    // 2. Custom Pane
+    map.createPane('lp2bPane');
+    map.getPane('lp2bPane').style.zIndex = 400;
+
+    map.createPane('rutePane');
+    map.getPane('rutePane').style.zIndex = 600;
+
+    // 3. Tile Layer Basemap (Esri World Imagery)
+    L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: 'Tiles © Esri' }
+    ).addTo(map);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // 4. Feature Group Rute
+    const layerRute = new L.FeatureGroup({ pane: 'rutePane' }).addTo(map);
+
+    // 5. Load GeoJSON LP2B dari GitHub Releases
+    fetch("https://github.com/andrimegi325-cyber/web-jalan-tani/releases/download/v1.0/lp2b_indonesia.geojson")
+        .then(res => {
+            if (!res.ok) throw new Error("GeoJSON LP2B tidak ditemukan");
+            return res.json();
+        })
+        .then(data => {
+            const lp2bLayer = L.geoJSON(data, {
+                pane: 'lp2bPane',
+                style: { 
+                    color: "#2ecc71", 
+                    weight: 2, 
+                    fillColor: "#27ae60", 
+                    fillOpacity: 0.45 
+                },
+                onEachFeature: function (feature, layer) {
+                    let info = "";
+                    if (feature.properties) {
+                        const desa = feature.properties.WADMKD || feature.properties.desa;
+                        const kec = feature.properties.WADMKC || feature.properties.kecamatan;
+                        const kab = feature.properties.WADMKK || feature.properties.kabupaten;
+
+                        if (kab) info += "<b>Kabupaten:</b> " + kab + "<br>";
+                        if (kec) info += "<b>Kecamatan:</b> " + kec + "<br>";
+                        if (desa) info += "<b>Desa:</b> " + desa + "<br>";
+                    }
+                    if (info !== "") layer.bindPopup(info);
+                }
+            }).addTo(map);
+
+            if (lp2bLayer.getLayers().length > 0) {
+                map.fitBounds(lp2bLayer.getBounds(), { padding: [30, 30] });
+            }
+        })
+        .catch(err => console.error("Error memuat LP2B:", err));
+
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 300);
+
+    // 6. Fungsi Plot Rute
+    function plotKePeta() {
+        layerRute.clearLayers();
+
+        const latAwal = parseFloat(document.getElementById('lat_awal').value);
+        const lonAwal = parseFloat(document.getElementById('lon_awal').value);
+        const latAkhir = parseFloat(document.getElementById('lat_akhir').value);
+        const lonAkhir = parseFloat(document.getElementById('lon_akhir').value);
+
+        if (!isNaN(latAwal) && !isNaN(lonAwal) && !isNaN(latAkhir) && !isNaN(lonAkhir)) {
+            const titikAwal = L.latLng(latAwal, lonAwal);
+            const titikAkhir = L.latLng(latAkhir, lonAkhir);
+
+            L.marker(titikAwal, { pane: 'rutePane' }).addTo(layerRute).bindPopup("Titik Awal");
+            L.marker(titikAkhir, { pane: 'rutePane' }).addTo(layerRute).bindPopup("Titik Akhir");
+
+            const garis = L.polyline([titikAwal, titikAkhir], { 
+                pane: 'rutePane',
+                color: '#e74c3c', 
+                weight: 5 
+            }).addTo(layerRute);
+
+            if (titikAwal.equals(titikAkhir)) {
+                map.setView(titikAwal, 15);
+            } else {
+                map.fitBounds(garis.getBounds(), { padding: [50, 50] });
+            }
+
+            const jarak = titikAwal.distanceTo(titikAkhir);
+            const teksJarak = jarak >= 1000 
+                ? (jarak / 1000).toFixed(2) + " km" 
+                : jarak.toFixed(2) + " meter";
+
+            document.getElementById('lbl-panjang').innerText = teksJarak;
+        } else {
+            alert("Harap isi seluruh koordinat Latitude dan Longitude dengan benar!");
+        }
+    }
+
+    // 7. Fungsi Kirim/Validasi Form
+    function prosesValidasi() {
+        alert("Data pengajuan berhasil dikirim untuk dianalisis!");
+    }
+</script>
+
+</body>
+</html>
