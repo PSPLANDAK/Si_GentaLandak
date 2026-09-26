@@ -72,10 +72,51 @@
             height: 100%;
         }
 
+        /* KOTAK PENCARIAN LOKASI DI ATAS PETA */
+        .search-box-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 320px;
+            max-width: calc(100% - 40px);
+        }
+
+        .search-box-container input {
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            flex: 1;
+        }
+
+        .search-box-container button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .search-box-container button:hover {
+            background-color: #0c2461;
+        }
+
         /* MODAL / BANNER PROSES ANALISIS */
         .status-modal {
             position: absolute;
-            top: 20px;
+            top: 75px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(255, 255, 255, 0.95);
@@ -263,10 +304,20 @@
 
             .map-container {
                 height: 45vh;
-                min-height: 280px;
+                min-height: 320px;
                 position: sticky;
                 top: 0;
                 z-index: 100;
+            }
+
+            .search-box-container {
+                top: 10px;
+                left: 10px;
+                width: calc(100% - 20px);
+            }
+
+            .status-modal {
+                top: 60px;
             }
 
             .form-row {
@@ -332,7 +383,7 @@
 
             <!-- INPUT KOORDINAT -->
             <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
-            <label style="color: var(--primary);">📍 Input Koordinat Jalan (Manual)</label>
+            <label style="color: var(--primary);">📍 Input Koordinat Jalan (Bisa Digeser di Peta)</label>
             <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 10px 0;">Format desimal: Lat (Y), Lon (X: 109.xxxx)</p>
 
             <div class="form-row">
@@ -357,7 +408,7 @@
                 </div>
             </div>
 
-            <button type="button" class="btn-preview" onclick="plotKePeta()">👁️ Tampilkan Rute di Peta</button>
+            <button type="button" class="btn-preview" onclick="plotKePeta(true)">👁️ Tampilkan Rute di Peta</button>
 
             <!-- UPLOAD FOTO SAWAH -->
             <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
@@ -388,6 +439,12 @@
 
     <!-- SISI KANAN: PETA -->
     <div class="map-container">
+        <!-- KOTAK PENCARIAN LOKASI -->
+        <div class="search-box-container">
+            <input type="text" id="searchInput" placeholder="Cari nama desa/lokasi atau lat, lon..." onkeypress="if(event.key==='Enter') cariLokasi()">
+            <button type="button" onclick="cariLokasi()">🔍 Cari</button>
+        </div>
+
         <div id="statusModal" class="status-modal">
             <div id="statusSpinner" class="spinner"></div>
             <div style="display: flex; flex-direction: column;">
@@ -407,6 +464,11 @@
     let photosSawah = [];
     let photosJalan = [];
     let cachedLp2bData = null; 
+    let searchMarker = null;
+
+    let markerAwal = null;
+    let markerAkhir = null;
+    let polylineRute = null;
 
     // 1. Inisialisasi Peta
     const map = L.map('map', { zoomControl: false }).setView([0.3847, 109.9532], 11);
@@ -429,8 +491,59 @@
 
     window.addEventListener('resize', () => map.invalidateSize());
 
-    // 2. Fungsi Plot Rute Manual di Peta
-    function plotKePeta() {
+    // 2. FUNGSI PENCARIAN LOKASI
+    async function cariLokasi() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) return;
+
+        const coordRegex = /^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$/;
+        
+        if (coordRegex.test(query)) {
+            const parts = query.split(',');
+            const lat = parseFloat(parts[0].trim());
+            const lon = parseFloat(parts[1].trim());
+
+            if (searchMarker) map.removeLayer(searchMarker);
+            searchMarker = L.marker([lat, lon]).addTo(map).bindPopup(`<b>Titik Hasil Cari:</b><br>${lat}, ${lon}`).openPopup();
+            map.flyTo([lat, lon], 15);
+            return;
+        }
+
+        try {
+            const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Landak, Kalimantan Barat')}`;
+            const res = await fetch(searchUrl);
+            const data = await res.json();
+
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+
+                if (searchMarker) map.removeLayer(searchMarker);
+                searchMarker = L.marker([lat, lon]).addTo(map).bindPopup(`<b>${data[0].display_name}</b>`).openPopup();
+                map.flyTo([lat, lon], 14);
+            } else {
+                const resGlobal = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const dataGlobal = await resGlobal.json();
+
+                if (dataGlobal && dataGlobal.length > 0) {
+                    const lat = parseFloat(dataGlobal[0].lat);
+                    const lon = parseFloat(dataGlobal[0].lon);
+
+                    if (searchMarker) map.removeLayer(searchMarker);
+                    searchMarker = L.marker([lat, lon]).addTo(map).bindPopup(`<b>${dataGlobal[0].display_name}</b>`).openPopup();
+                    map.flyTo([lat, lon], 14);
+                } else {
+                    alert('Lokasi tidak ditemukan. Coba ketik nama desa/kecamatan lebih spesifik atau gunakan koordinat desimal.');
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Gagal terhubung ke layanan pencarian.');
+        }
+    }
+
+    // 3. FUNGSI PLOT RUTE DENGAN PIN BISA DIGESER (DRAGGABLE)
+    function plotKePeta(autoZoom = true) {
         layerRute.clearLayers();
 
         const latAwal = parseFloat(document.getElementById('lat_awal').value);
@@ -442,35 +555,82 @@
             const titikAwal = L.latLng(latAwal, lonAwal);
             const titikAkhir = L.latLng(latAkhir, lonAkhir);
 
-            L.marker(titikAwal, { pane: 'rutePane' }).addTo(layerRute).bindPopup("Titik Awal Rute");
-            L.marker(titikAkhir, { pane: 'rutePane' }).addTo(layerRute).bindPopup("Titik Akhir Rute");
+            // Buat Marker Awal yang Bisa Digeser (Draggable)
+            markerAwal = L.marker(titikAwal, { 
+                pane: 'rutePane',
+                draggable: true 
+            }).addTo(layerRute).bindPopup("Titik Awal (Tarik untuk menggeser)");
 
-            const garis = L.polyline([titikAwal, titikAkhir], { 
+            // Buat Marker Akhir yang Bisa Digeser (Draggable)
+            markerAkhir = L.marker(titikAkhir, { 
+                pane: 'rutePane',
+                draggable: true 
+            }).addTo(layerRute).bindPopup("Titik Akhir (Tarik untuk menggeser)");
+
+            // Garis Penghubung
+            polylineRute = L.polyline([titikAwal, titikAkhir], { 
                 pane: 'rutePane',
                 color: '#e74c3c', 
                 weight: 5 
             }).addTo(layerRute);
 
-            if (titikAwal.equals(titikAkhir)) {
-                map.setView(titikAwal, 15);
-            } else {
-                map.fitBounds(garis.getBounds(), { padding: [40, 40] });
+            // Event saat Marker Awal Digeser
+            markerAwal.on('drag', updateFormInputSertaGaris);
+            
+            // Event saat Marker Akhir Digeser
+            markerAkhir.on('drag', updateFormInputSertaGaris);
+
+            // Zoom Peta
+            if (autoZoom) {
+                if (titikAwal.equals(titikAkhir)) {
+                    map.setView(titikAwal, 15);
+                } else {
+                    map.fitBounds(polylineRute.getBounds(), { padding: [40, 40] });
+                }
             }
 
-            const jarak = titikAwal.distanceTo(titikAkhir);
-            document.getElementById('lbl-panjang').innerText = jarak >= 1000 
-                ? (jarak / 1000).toFixed(2) + " km" 
-                : jarak.toFixed(2) + " meter";
+            updateHitungJarak();
 
-            if (window.innerWidth <= 768) {
+            if (autoZoom && window.innerWidth <= 768) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         } else {
-            alert("Harap isi seluruh koordinat Latitude dan Longitude terlebih dahulu!");
+            if (autoZoom) alert("Harap isi seluruh koordinat Latitude dan Longitude terlebih dahulu!");
         }
     }
 
-    // 3. FUNGSI ANALISIS SPASIAL + TAMPILKAN LP2B AREA TERDEKAT (RADIUS 5 KM)
+    // Update Input Formulir & Garis Peta Secara Realtime Saat Pin Digeser
+    function updateFormInputSertaGaris() {
+        if (!markerAwal || !markerAkhir || !polylineRute) return;
+
+        const posAwal = markerAwal.getLatLng();
+        const posAkhir = markerAkhir.getLatLng();
+
+        // Update Input Form
+        document.getElementById('lat_awal').value = posAwal.lat.toFixed(6);
+        document.getElementById('lon_awal').value = posAwal.lng.toFixed(6);
+        document.getElementById('lat_akhir').value = posAkhir.lat.toFixed(6);
+        document.getElementById('lon_akhir').value = posAkhir.lng.toFixed(6);
+
+        // Update Garis di Peta
+        polylineRute.setLatLngs([posAwal, posAkhir]);
+
+        updateHitungJarak();
+    }
+
+    // Kalkulasi Jarak
+    function updateHitungJarak() {
+        if (!markerAwal || !markerAkhir) return;
+        const posAwal = markerAwal.getLatLng();
+        const posAkhir = markerAkhir.getLatLng();
+        
+        const jarak = posAwal.distanceTo(posAkhir);
+        document.getElementById('lbl-panjang').innerText = jarak >= 1000 
+            ? (jarak / 1000).toFixed(2) + " km" 
+            : jarak.toFixed(2) + " meter";
+    }
+
+    // 4. FUNGSI ANALISIS SPASIAL + TAMPILKAN LP2B AREA TERDEKAT (RADIUS 5 KM)
     async function prosesValidasiDanAnalisis() {
         const latAwal = parseFloat(document.getElementById('lat_awal').value);
         const lonAwal = parseFloat(document.getElementById('lon_awal').value);
@@ -482,7 +642,7 @@
             return;
         }
 
-        plotKePeta();
+        plotKePeta(false);
         showStatusModal("Mengekstrak Data LP2B...", "Mohon tunggu, sedang memuat spasial wilayah...", true);
 
         try {
@@ -499,10 +659,7 @@
 
             showStatusModal("Menganalisis Keterkaitan LP2B...", "Memeriksa tumpang tindih & area sekitar...", true);
 
-            // 1. Buat Garis Rute
             const line = turf.lineString([[lonAwal, latAwal], [lonAkhir, latAkhir]]);
-            
-            // 2. Buat Zone/Buffer Radius 5 Kilometer di sekitar rute
             const bufferedSearchZone = turf.buffer(line, 5, { units: 'kilometers' });
 
             let isDirectIntersect = false;
@@ -511,7 +668,6 @@
 
             layerLp2b.clearLayers();
 
-            // 3. Filter & Munculkan Poligon LP2B yang Berada di Radius 5 KM dari Rute
             L.geoJSON(cachedLp2bData, {
                 pane: 'lp2bPane',
                 style: function(feature) {
@@ -523,7 +679,6 @@
                 },
                 filter: function(feature) {
                     try {
-                        // Cek apakah poligon LP2B ini berada di dalam zona radius 5 km
                         const inNearbyZone = turf.booleanIntersects(bufferedSearchZone, feature);
                         if (inNearbyZone) {
                             countNearby++;
@@ -531,7 +686,7 @@
                                 isDirectIntersect = true;
                                 countIntersect++;
                             }
-                            return true; // Render poligon terdekat ke peta
+                            return true;
                         }
                     } catch (e) {
                         return false;
@@ -550,7 +705,6 @@
                 }
             }).addTo(layerLp2b);
 
-            // 4. Tampilkan Notifikasi & Status Hasil Analisis
             if (isDirectIntersect) {
                 showStatusModal(
                     "✅ ANALISIS SELESAI: MASUK KAWASAN LP2B", 
@@ -594,7 +748,7 @@
         modal.style.display = 'flex';
     }
 
-    // 4. Pengelola File Foto Preview
+    // 5. Pengelola File Foto Preview
     function handleFotoUpload(input, kategori) {
         const files = Array.from(input.files);
         const targetArray = (kategori === 'sawah') ? photosSawah : photosJalan;
