@@ -366,8 +366,8 @@
                     <input type="text" id="nama_ketua" required>
                 </div>
                 <div class="form-group">
-                    <label>NIK Ketua</label>
-                    <input type="text" id="nik" maxlength="16" required>
+                    <label>NIK Ketua (16 Digit Angka)</label>
+                    <input type="text" id="nik" maxlength="16" pattern="[0-9]{16}" title="NIK harus berupa 16 digit angka" oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="3204xxxxxxxxxxxx" required>
                 </div>
             </div>
             
@@ -649,6 +649,14 @@
 
     // 4. ANALISIS SPASIAL STRICT (HANYA RENDER POLIGON DALAM RADIUS 5 KM) & KIRIM KE BACKEND
     async function prosesValidasiDanAnalisis() {
+        // Validasi tambahan NIK sebelum analisis spasial
+        const nikInput = document.getElementById('nik').value;
+        if (nikInput.length !== 16 || isNaN(nikInput)) {
+            alert("⚠️ NIK harus berupa angka dan persis berjumlah 16 digit!");
+            document.getElementById('nik').focus();
+            return;
+        }
+
         if (!polylineRute) plotKePeta(false);
 
         const latLngs = polylineRute ? polylineRute.getLatLngs() : [];
