@@ -8,6 +8,9 @@
     <!-- PUSTAKA PETA LEAFLET CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
+    <!-- PUSTAKA LEAFLET GEOMAN (UNTUK GARIS BISA DIBELOK-BELOKKAN / EDITABLE) -->
+    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+
     <!-- PUSTAKA JSZIP & TURF.JS UNTUK ANALISIS SPASIAL -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
@@ -383,7 +386,7 @@
 
             <!-- INPUT KOORDINAT -->
             <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
-            <label style="color: var(--primary);">📍 Input Koordinat Jalan (Bisa Digeser di Peta)</label>
+            <label style="color: var(--primary);">📍 Input Koordinat Jalan (Tarik Garis / Pin di Peta untuk Dikelokkan)</label>
             <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 10px 0;">Format desimal: Lat (Y), Lon (X: 109.xxxx)</p>
 
             <div class="form-row">
@@ -428,7 +431,7 @@
 
             <div class="summary-card">
                 <div class="summary-item">
-                    <label>📏 Jarak Garis Lurus:</label>
+                    <label>📏 Total Panjang Jalan (Mengikuti Kelok):</label>
                     <span id="lbl-panjang" style="color: var(--success); font-size: 15px; font-weight: bold;">0 meter</span>
                 </div>
             </div>
@@ -460,14 +463,15 @@
 <!-- LEAFLET JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+<!-- LEAFLET GEOMAN JS (UNTUK EDIT KELOKAN GARIS) -->
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
+
 <script>
     let photosSawah = [];
     let photosJalan = [];
     let cachedLp2bData = null; 
     let searchMarker = null;
 
-    let markerAwal = null;
-    let markerAkhir = null;
     let polylineRute = null;
 
     // 1. Inisialisasi Peta
@@ -542,7 +546,7 @@
         }
     }
 
-    // 3. FUNGSI PLOT RUTE DENGAN PIN BISA DIGESER (DRAGGABLE)
+    // 3. FUNGSI PLOT RUTE DENGAN GARIS YANG BISA DIBELOK-BELOKKAN
     function plotKePeta(autoZoom = true) {
         layerRute.clearLayers();
 
@@ -555,30 +559,23 @@
             const titikAwal = L.latLng(latAwal, lonAwal);
             const titikAkhir = L.latLng(latAkhir, lonAkhir);
 
-            // Buat Marker Awal yang Bisa Digeser (Draggable)
-            markerAwal = L.marker(titikAwal, { 
-                pane: 'rutePane',
-                draggable: true 
-            }).addTo(layerRute).bindPopup("Titik Awal (Tarik untuk menggeser)");
-
-            // Buat Marker Akhir yang Bisa Digeser (Draggable)
-            markerAkhir = L.marker(titikAkhir, { 
-                pane: 'rutePane',
-                draggable: true 
-            }).addTo(layerRute).bindPopup("Titik Akhir (Tarik untuk menggeser)");
-
-            // Garis Penghubung
+            // Buat Garis Penghubung Interaktif
             polylineRute = L.polyline([titikAwal, titikAkhir], { 
                 pane: 'rutePane',
                 color: '#e74c3c', 
                 weight: 5 
             }).addTo(layerRute);
 
-            // Event saat Marker Awal Digeser
-            markerAwal.on('drag', updateFormInputSertaGaris);
-            
-            // Event saat Marker Akhir Digeser
-            markerAkhir.on('drag', updateFormInputSertaGaris);
+            // Aktifkan mode edit Geoman agar garis bisa ditarik/dibelokkan di tengahnya
+            polylineRute.pm.enable({
+                allowSelfIntersection: false
+            });
+
+            // Event saat garis diubah/dikelokkan
+            polylineRute.on('pm:edit', updateFormDanJarak);
+            polylineRute.on('pm:vertexadded', updateFormDanJarak);
+            polylineRute.on('pm:vertexremoved', updateFormDanJarak);
+            polylineRute.on('pm:markerdrag', updateFormDanJarak);
 
             // Zoom Peta
             if (autoZoom) {
@@ -589,7 +586,7 @@
                 }
             }
 
-            updateHitungJarak();
+            updateHitungJarakLengkung();
 
             if (autoZoom && window.innerWidth <= 768) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -599,50 +596,54 @@
         }
     }
 
-    // Update Input Formulir & Garis Peta Secara Realtime Saat Pin Digeser
-    function updateFormInputSertaGaris() {
-        if (!markerAwal || !markerAkhir || !polylineRute) return;
+    // Update Input Formulir & Hitung Total Jarak Berkelok Secara Realtime
+    function updateFormDanJarak() {
+        if (!polylineRute) return;
 
-        const posAwal = markerAwal.getLatLng();
-        const posAkhir = markerAkhir.getLatLng();
+        const latLngs = polylineRute.getLatLngs();
+        if (latLngs.length > 0) {
+            const awal = latLngs[0];
+            const akhir = latLngs[latLngs.length - 1];
 
-        // Update Input Form
-        document.getElementById('lat_awal').value = posAwal.lat.toFixed(6);
-        document.getElementById('lon_awal').value = posAwal.lng.toFixed(6);
-        document.getElementById('lat_akhir').value = posAkhir.lat.toFixed(6);
-        document.getElementById('lon_akhir').value = posAkhir.lng.toFixed(6);
+            // Update Input Form untuk Titik Awal & Ujung Akhir Jalan
+            document.getElementById('lat_awal').value = awal.lat.toFixed(6);
+            document.getElementById('lon_awal').value = awal.lng.toFixed(6);
+            document.getElementById('lat_akhir').value = akhir.lat.toFixed(6);
+            document.getElementById('lon_akhir').value = akhir.lng.toFixed(6);
+        }
 
-        // Update Garis di Peta
-        polylineRute.setLatLngs([posAwal, posAkhir]);
-
-        updateHitungJarak();
+        updateHitungJarakLengkung();
     }
 
-    // Kalkulasi Jarak
-    function updateHitungJarak() {
-        if (!markerAwal || !markerAkhir) return;
-        const posAwal = markerAwal.getLatLng();
-        const posAkhir = markerAkhir.getLatLng();
+    // Kalkulasi Total Jarak Berkelok Mengikuti Setiap Segmen Garis
+    function updateHitungJarakLengkung() {
+        if (!polylineRute) return;
         
-        const jarak = posAwal.distanceTo(posAkhir);
-        document.getElementById('lbl-panjang').innerText = jarak >= 1000 
-            ? (jarak / 1000).toFixed(2) + " km" 
-            : jarak.toFixed(2) + " meter";
+        const latLngs = polylineRute.getLatLngs();
+        let totalJarak = 0;
+
+        for (let i = 0; i < latLngs.length - 1; i++) {
+            totalJarak += latLngs[i].distanceTo(latLngs[i + 1]);
+        }
+
+        document.getElementById('lbl-panjang').innerText = totalJarak >= 1000 
+            ? (totalJarak / 1000).toFixed(2) + " km" 
+            : totalJarak.toFixed(2) + " meter";
     }
 
     // 4. FUNGSI ANALISIS SPASIAL + TAMPILKAN LP2B AREA TERDEKAT (RADIUS 5 KM)
     async function prosesValidasiDanAnalisis() {
-        const latAwal = parseFloat(document.getElementById('lat_awal').value);
-        const lonAwal = parseFloat(document.getElementById('lon_awal').value);
-        const latAkhir = parseFloat(document.getElementById('lat_akhir').value);
-        const lonAkhir = parseFloat(document.getElementById('lon_akhir').value);
-
-        if (isNaN(latAwal) || isNaN(lonAwal) || isNaN(latAkhir) || isNaN(lonAkhir)) {
-            alert("Isi koordinat dengan benar terlebih dahulu!");
+        if (!polylineRute) {
+            alert("Harap tampilkan rute terlebih dahulu!");
             return;
         }
 
-        plotKePeta(false);
+        const latLngs = polylineRute.getLatLngs();
+        if (latLngs.length < 2) {
+            alert("Rute jalan tidak valid!");
+            return;
+        }
+
         showStatusModal("Mengekstrak Data LP2B...", "Mohon tunggu, sedang memuat spasial wilayah...", true);
 
         try {
@@ -659,7 +660,9 @@
 
             showStatusModal("Menganalisis Keterkaitan LP2B...", "Memeriksa tumpang tindih & area sekitar...", true);
 
-            const line = turf.lineString([[lonAwal, latAwal], [lonAkhir, latAkhir]]);
+            // Ubah garis belokan Leaflet ke Turf LineString
+            const lineCoordinates = latLngs.map(point => [point.lng, point.lat]);
+            const line = turf.lineString(lineCoordinates);
             const bufferedSearchZone = turf.buffer(line, 5, { units: 'kilometers' });
 
             let isDirectIntersect = false;
