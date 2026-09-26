@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sistem Informasi Geografis Pengajuan JUT & Horti - Kab. Landak</title>
     
     <!-- PUSTAKA PETA LEAFLET CSS -->
@@ -22,39 +22,48 @@
             --border: #dcdde1;
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
+            width: 100%;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-main);
             overflow: hidden;
         }
 
+        /* CONTAINER UTAMA (DESKTOP: KIRI-KANAN) */
         .app-wrapper {
             display: flex;
+            flex-direction: row;
             height: 100vh;
             width: 100vw;
+            overflow: hidden;
         }
 
-        /* KOLOM KIRI: FORMULIR INPUT */
+        /* KOLOM FORMULIR INPUT */
         .sidebar-form {
             width: 450px;
+            min-width: 320px;
             background-color: var(--bg-side);
             box-shadow: 4px 0 15px rgba(0,0,0,0.05);
-            padding: 25px;
-            box-sizing: border-box;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
             z-index: 10;
         }
 
-        /* KOLOM KANAN: PETA PENUH */
+        /* KOLOM PETA PENUH */
         .map-container {
             flex: 1;
             position: relative;
             height: 100%;
+            width: 100%;
         }
 
         #map {
@@ -63,7 +72,7 @@
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             display: flex;
             flex-direction: column;
         }
@@ -71,7 +80,7 @@
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 10px;
         }
 
         label {
@@ -88,6 +97,13 @@
             font-size: 13.5px;
             background-color: #fafafa;
             transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        input[type="file"] {
+            padding: 8px;
+            background-color: #fff;
+            cursor: pointer;
         }
 
         input:focus {
@@ -101,7 +117,7 @@
             background-color: var(--primary);
             color: white;
             border: none;
-            padding: 10px;
+            padding: 12px;
             border-radius: 6px;
             font-size: 13px;
             font-weight: bold;
@@ -109,6 +125,7 @@
             margin-top: 5px;
             margin-bottom: 15px;
             transition: background 0.2s;
+            width: 100%;
         }
 
         .btn-preview:hover {
@@ -119,9 +136,9 @@
             background-color: #f8f9fa;
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 15px;
+            padding: 12px 15px;
             margin-top: 5px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .summary-item {
@@ -129,6 +146,51 @@
             justify-content: space-between;
             align-items: center;
             font-size: 14px;
+        }
+
+        /* GRID PRATINJAU FOTO LOKASI */
+        .photo-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .photo-preview-item {
+            position: relative;
+            width: 100%;
+            padding-top: 75%; /* Ratio 4:3 */
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background-color: #f1f2f6;
+        }
+
+        .photo-preview-item img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-preview-item .remove-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }
 
         .btn-submit {
@@ -143,6 +205,7 @@
             width: 100%;
             transition: background 0.2s;
             box-shadow: 0 4px 10px rgba(39,174,96,0.2);
+            margin-bottom: 20px;
         }
 
         .btn-submit:hover {
@@ -153,15 +216,71 @@
             position: absolute;
             top: 15px;
             right: 15px;
-            background: white;
-            padding: 12px 18px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 14px;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.15);
             z-index: 1000;
-            font-size: 12.5px;
-            max-width: 320px;
+            font-size: 12px;
+            max-width: 280px;
             border-left: 4px solid var(--primary);
             pointer-events: none;
+        }
+
+        /* ========================================================= */
+        /* MEDIA QUERIES (TAMPILAN KHUSUS MOBILE / HP)               */
+        /* ========================================================= */
+        @media screen and (max-width: 768px) {
+            body, html {
+                overflow: auto; /* Memungkinkan scroll penuh di HP */
+            }
+
+            .app-wrapper {
+                flex-direction: column-reverse; /* Peta di atas, Form di bawah */
+                height: auto;
+                min-height: 100vh;
+                overflow: visible;
+            }
+
+            .sidebar-form {
+                width: 100%;
+                box-shadow: none;
+                padding: 15px;
+                overflow-y: visible;
+            }
+
+            .map-container {
+                height: 45vh; /* Peta mengambil 45% tinggi layar HP */
+                min-height: 300px;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            }
+
+            .map-overlay-tip {
+                display: none; /* Sembunyikan petunjuk melayang di HP agar tidak mempersempit peta */
+            }
+
+            .dinas-header {
+                gap: 10px !important;
+                padding-bottom: 10px !important;
+                margin-bottom: 15px !important;
+            }
+
+            .dinas-header img {
+                width: 45px !important;
+                height: 55px !important;
+            }
+
+            .dinas-title-container span {
+                font-size: 11.5px !important;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr; /* Di HP, input berderet vertikal */
+                gap: 0;
+            }
         }
     </style>
 </head>
@@ -251,6 +370,28 @@
 
             <button type="button" class="btn-preview" onclick="plotKePeta()">👁️ Plot Rute ke Peta</button>
 
+            <!-- SECTION UPLOAD FOTO 1: FOTO SAWAH -->
+            <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
+            <div class="form-group">
+                <label style="color: var(--primary);">🌾 Foto Lahan Sawah / Hamparan (Maks. 2 Foto)</label>
+                <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 8px 0;">Pilih hingga 2 file foto kondisi lahan sawah/hamparan.</p>
+                <input type="file" id="foto_sawah_input" accept="image/*" multiple onchange="handleFotoUpload(this, 'sawah')">
+                
+                <!-- KOTAK PRATINJAU FOTO SAWAH -->
+                <div id="previewSawahGrid" class="photo-preview-grid"></div>
+            </div>
+
+            <!-- SECTION UPLOAD FOTO 2: FOTO RENCANA JALAN -->
+            <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
+            <div class="form-group">
+                <label style="color: var(--primary);">🛣️ Foto Lokasi Rencana Jalan (Maks. 2 Foto)</label>
+                <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 8px 0;">Pilih hingga 2 file foto lokasi yang akan dibangun jalan.</p>
+                <input type="file" id="foto_jalan_input" accept="image/*" multiple onchange="handleFotoUpload(this, 'jalan')">
+                
+                <!-- KOTAK PRATINJAU FOTO JALAN -->
+                <div id="previewJalanGrid" class="photo-preview-grid"></div>
+            </div>
+
             <div class="summary-card">
                 <div class="summary-item">
                     <label>📏 Jarak Garis Lurus:</label>
@@ -277,6 +418,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+    // Penampung file foto terpisah
+    let photosSawah = [];
+    let photosJalan = [];
+
     // 1. Inisialisasi Peta
     const map = L.map('map', { zoomControl: false }).setView([0.3847, 109.9532], 12);
 
@@ -345,9 +490,14 @@
 
     loadGeoJsonFromZip();
 
+    // Memastikan peta ter-render ulang saat layar di-resize
+    window.addEventListener('resize', () => {
+        map.invalidateSize();
+    });
+
     setTimeout(() => {
         map.invalidateSize();
-    }, 300);
+    }, 500);
 
     // 6. Fungsi Plot Rute
     function plotKePeta() {
@@ -374,7 +524,7 @@
             if (titikAwal.equals(titikAkhir)) {
                 map.setView(titikAwal, 15);
             } else {
-                map.fitBounds(garis.getBounds(), { padding: [50, 50] });
+                map.fitBounds(garis.getBounds(), { padding: [30, 30] });
             }
 
             const jarak = titikAwal.distanceTo(titikAkhir);
@@ -383,14 +533,73 @@
                 : jarak.toFixed(2) + " meter";
 
             document.getElementById('lbl-panjang').innerText = teksJarak;
+
+            // Scroll otomatis ke posisi peta di HP setelah tombol Plot ditekan
+            if (window.innerWidth <= 768) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         } else {
             alert("Harap isi seluruh koordinat Latitude dan Longitude dengan benar!");
         }
     }
 
-    // 7. Fungsi Kirim/Validasi Form
+    // 7. FUNGSI UNTUK MENGELOLA DUA KATEGORI UPLOAD FOTO (SAWAH & JALAN)
+    function handleFotoUpload(input, kategori) {
+        const files = Array.from(input.files);
+        const targetArray = (kategori === 'sawah') ? photosSawah : photosJalan;
+
+        if (files.length + targetArray.length > 2) {
+            alert(`Maksimal foto ${kategori === 'sawah' ? 'lahan sawah' : 'lokasi jalan'} adalah 2 foto.`);
+            input.value = "";
+            return;
+        }
+
+        files.forEach(file => {
+            if (targetArray.length < 2) {
+                targetArray.push(file);
+            }
+        });
+
+        input.value = "";
+        renderPhotoPreview(kategori);
+    }
+
+    function renderPhotoPreview(kategori) {
+        const targetArray = (kategori === 'sawah') ? photosSawah : photosJalan;
+        const gridId = (kategori === 'sawah') ? 'previewSawahGrid' : 'previewJalanGrid';
+        const grid = document.getElementById(gridId);
+        
+        grid.innerHTML = "";
+
+        targetArray.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const item = document.createElement('div');
+                item.className = 'photo-preview-item';
+                item.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview Foto ${index + 1}">
+                    <button class="remove-btn" onclick="hapusFoto(${index}, '${kategori}')">✕</button>
+                `;
+                grid.appendChild(item);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function hapusFoto(index, kategori) {
+        if (kategori === 'sawah') {
+            photosSawah.splice(index, 1);
+        } else {
+            photosJalan.splice(index, 1);
+        }
+        renderPhotoPreview(kategori);
+    }
+
+    // 8. Fungsi Kirim/Validasi Form
     function prosesValidasi() {
-        alert("Data pengajuan berhasil dikirim untuk dianalisis!");
+        alert(`Data pengajuan berhasil dikirim!\n` +
+              `- Foto Lahan Sawah: ${photosSawah.length} foto\n` +
+              `- Foto Rencana Jalan: ${photosJalan.length} foto`);
     }
 </script>
 
