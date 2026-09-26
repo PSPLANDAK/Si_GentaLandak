@@ -40,6 +40,51 @@
             overflow: hidden;
         }
 
+        /* STYLE SPLASH SCREEN / LOGO UTAMA DI AWAL */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            transition: opacity 0.5s ease;
+            gap: 20px;
+        }
+
+        .splash-title {
+            font-size: 36px; /* Ukuran diperbesar */
+            font-weight: 900;
+            color: #27ae60; /* Warna disamakan dengan nuansa hijau daun pada logo */
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-align: center;
+            animation: kedipTeks 1s infinite alternate; /* Efek kedip/berdenyut */
+        }
+
+        /* Animasi kedip untuk teks */
+        @keyframes kedipTeks {
+            0% { opacity: 0.3; transform: scale(0.98); }
+            100% { opacity: 1; transform: scale(1.02); }
+        }
+
+        #splash-screen img {
+            width: 350px;
+            height: auto;
+            object-fit: contain;
+            animation: pulseLogo 1s infinite alternate;
+        }
+
+        @keyframes pulseLogo {
+            0% { transform: scale(0.95); opacity: 0.85; }
+            100% { transform: scale(1.03); opacity: 1; }
+        }
+
         .app-wrapper {
             display: flex;
             flex-direction: row;
@@ -314,7 +359,6 @@
             background-color: #219653;
         }
 
-        /* Styling Modal Kostum untuk Password */
         .custom-modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -416,6 +460,12 @@
     </style>
 </head>
 <body>
+
+<!-- SPLASH SCREEN DENGAN TEKS BESAR, WARNA SELARAS LOGO, DAN EFEK KEDIP -->
+<div id="splash-screen">
+    <div class="splash-title">SELAMAT DATANG</div>
+    <img src="Logo Home.png" alt="Logo Home" onerror="this.style.display='none'">
+</div>
 
 <div class="app-wrapper">
     
@@ -563,7 +613,7 @@
 
 </div>
 
-<!-- MODAL PASSWORD TERSEMBUNYI (DISGUISED INPUT) -->
+<!-- MODAL PASSWORD TERSEMBUNYI -->
 <div id="passwordModalOverlay" class="custom-modal-overlay">
     <div class="custom-modal-box">
         <h4 id="modalTitle">🔒 Masukkan Password</h4>
@@ -578,12 +628,20 @@
 
 <!-- LEAFLET JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<!-- LEAFLET GEOMAN JS (UNTUK EDIT KELOKAN GARIS) -->
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
 <script>
-    // DATA WILAYAH KABUPATEN LANDAK (13 KECAMATAN & DESA)
+    // PENGAMAN TIMER 2 DETIK: Dijamin hilang otomatis masuk ke menu utama
+    setTimeout(function() {
+        const splash = document.getElementById("splash-screen");
+        if (splash) {
+            splash.style.opacity = "0";
+            setTimeout(function() {
+                splash.style.display = "none";
+            }, 500);
+        }
+    }, 2000);
+
     const wilayahLandak = {
         "Air Besar": ["Bentiang", "Dango Aji", "Engkadik", "Engkangin", "Jambu Tembawang", "Merayuh", "Nyari", "Parek", "Sekendal", "Sempatung Lawek", "Semuntik", "Sepangah", "Serimbu", "Tenguwe", "Temoyok", "Tengon Pelaik"],
         "Banyuke Hulu": ["Gamang", "Kampet", "Padang Pio", "Ringo Lojok", "Semade", "Tembawang Bale", "Untang"],
@@ -605,14 +663,11 @@
     let cachedLp2bData = null; 
     let searchMarker = null;
     let polylineRute = null;
-
     let targetUrlTujuan = "";
     let jenisAksesGlobal = "";
 
-    // URL Web App Google Apps Script Terbaru Anda
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxH6xzzZO4uYlwEvRibwb1BTZvVs4tIuEXuHK8brSzJYJKD-IY6zs7yTmqHxg4lBAhP/exec";
 
-    // Fungsi Sistem Proteksi Password Tersembunyi (Modal)
     function bukaModalPassword(jenis, urlTujuan) {
         jenisAksesGlobal = jenis;
         targetUrlTujuan = urlTujuan;
@@ -638,7 +693,6 @@
         }
     }
 
-    // Inisialisasi Pilihan Kecamatan & Muat Data Spreadsheet
     window.addEventListener('DOMContentLoaded', () => {
         const selectKecamatan = document.getElementById('kecamatan');
         const sortedKecamatan = Object.keys(wilayahLandak).sort();
@@ -650,14 +704,12 @@
             selectKecamatan.appendChild(opt);
         });
 
-        // Muat data dari spreadsheet ke peta setelah jeda singkat
         setTimeout(muatDataDariSpreadsheet, 500);
     });
 
     function updateDesaList() {
         const kecSelected = document.getElementById('kecamatan').value;
         const selectDesa = document.getElementById('desa');
-        
         selectDesa.innerHTML = '<option value="">-- Pilih Desa --</option>';
         
         if (kecSelected && wilayahLandak[kecSelected]) {
@@ -671,7 +723,6 @@
         }
     }
 
-    // 1. Inisialisasi Peta
     const map = L.map('map', { zoomControl: false }).setView([0.3847, 109.9532], 11);
 
     map.createPane('lp2bPane');
@@ -692,7 +743,6 @@
 
     window.addEventListener('resize', () => map.invalidateSize());
 
-    // 2. FUNGSI PENCARIAN LOKASI
     async function cariLokasi() {
         const query = document.getElementById('searchInput').value.trim();
         if (!query) return;
@@ -728,7 +778,6 @@
         }
     }
 
-    // 3. PLOT RUTE PETA
     function plotKePeta(autoZoom = true) {
         layerRute.clearLayers();
 
@@ -805,7 +854,6 @@
         modal.style.display = 'flex';
     }
 
-    // FUNGSI MEMUAT DATA DARI SPREADSHEET (DENGAN HOVER TOOLTIP OTOMATIS)
     async function muatDataDariSpreadsheet() {
         try {
             const res = await fetch(GOOGLE_SCRIPT_URL);
@@ -828,10 +876,8 @@
 
                 if (isNaN(lat) || isNaN(lon)) return;
 
-                // 1. Buat Marker Pin
                 const pinTersimpan = L.marker([lat, lon]).addTo(layerDataTersimpan);
                 
-                // 2. Terapkan Tooltip agar muncul saat KURSOR MENGARAH (HOVER) TANPA KLIK
                 const infoText = `
                     <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4;">
                         <b>🌾 Poktan:</b> ${row["Nama Poktan"] || 'Tidak diketahui'}<br>
@@ -843,7 +889,6 @@
                 `;
                 pinTersimpan.bindTooltip(infoText, { direction: 'top', offset: [0, -10] });
 
-                // 3. Event ketika Pin DIKLIK (opsional tetap memuat batas LP2B ke peta)
                 pinTersimpan.on('click', async function() {
                     if (!cachedLp2bData) {
                         try {
@@ -893,7 +938,6 @@
         }
     }
 
-    // 4. ANALISIS SPASIAL STRICT & KIRIM KE BACKEND
     async function prosesValidasiDanAnalisis() {
         const nikInput = document.getElementById('nik').value;
         if (nikInput.length !== 16 || isNaN(nikInput)) {
@@ -1009,24 +1053,19 @@
     async function kirimDataKeBackend() {
         showStatusModal("Mengirim Data...", "Menyimpan data ke server dan spreadsheet...", true);
         
-        // Ambil data form
-        const nama_poktan = document.getElementById('nama_poktan').value;
-        const kecamatan = document.getElementById('kecamatan').value;
-        const desa = document.getElementById('desa').value;
-        const nama_ketua = document.getElementById('nama_ketua').value;
-        const nik = document.getElementById('nik').value;
-        const jumlah_anggota = document.getElementById('jumlah_anggota').value;
-        const luas_lahan = document.getElementById('luas_lahan').value;
-        const lat_awal = document.getElementById('lat_awal').value;
-        const lon_awal = document.getElementById('lon_awal').value;
-        const lat_akhir = document.getElementById('lat_akhir').value;
-        const lon_akhir = document.getElementById('lon_akhir').value;
-        const panjang_jalan = document.getElementById('lbl-panjang').innerText;
-
         const payload = {
-            nama_poktan, kecamatan, desa, nama_ketua, nik,
-            jumlah_anggota, luas_lahan, lat_awal, lon_awal,
-            lat_akhir, lon_akhir, panjang_jalan,
+            nama_poktan: document.getElementById('nama_poktan').value,
+            kecamatan: document.getElementById('kecamatan').value,
+            desa: document.getElementById('desa').value,
+            nama_ketua: document.getElementById('nama_ketua').value,
+            nik: document.getElementById('nik').value,
+            jumlah_anggota: document.getElementById('jumlah_anggota').value,
+            luas_lahan: document.getElementById('luas_lahan').value,
+            lat_awal: document.getElementById('lat_awal').value,
+            lon_awal: document.getElementById('lon_awal').value,
+            lat_akhir: document.getElementById('lat_akhir').value,
+            lon_akhir: document.getElementById('lon_akhir').value,
+            panjang_jalan: document.getElementById('lbl-panjang').innerText,
             foto_sawah: photosSawah,
             foto_jalan: photosJalan
         };
@@ -1089,7 +1128,6 @@
     function renderPhotoPreviews(jenis) {
         const targetArray = jenis === 'sawah' ? photosSawah : photosJalan;
         const gridElement = document.getElementById(jenis === 'sawah' ? 'previewSawahGrid' : 'previewJalanGrid');
-        
         gridElement.innerHTML = '';
 
         targetArray.forEach((item, index) => {
