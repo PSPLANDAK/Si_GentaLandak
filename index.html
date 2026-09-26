@@ -567,7 +567,7 @@
         });
 
         // Muat data dari spreadsheet ke peta setelah jeda singkat
-        setTimeout(muatDataDariSpreadsheet, 1000);
+        setTimeout(muatDataDariSpreadsheet, 500);
     });
 
     function updateDesaList() {
@@ -721,7 +721,7 @@
         modal.style.display = 'flex';
     }
 
-    // FUNGSI MEMUAT DATA DARI SPREADSHEET (HANYA PIN SAJA AGAR RINGAN, LP2B DIMUAT SAAT KLIK PIN)
+    // FUNGSI MEMUAT DATA DARI SPREADSHEET (DIOPTIMALKAN SUPAYA RINGAN & CEPAT)
     async function muatDataDariSpreadsheet() {
         try {
             const res = await fetch(GOOGLE_SCRIPT_URL);
@@ -744,7 +744,7 @@
 
                 if (isNaN(lat) || isNaN(lon)) return;
 
-                // 1. Buat Pin Sederhana untuk Data Terinput
+                // 1. Buat Pin Sederhana
                 const pinTersimpan = L.marker([lat, lon]).addTo(layerDataTersimpan);
                 
                 // 2. Event ketika Pin Diklik, baru muat & tampilkan Poligon LP2B-nya
@@ -991,7 +991,6 @@
         if (!files || files.length === 0) return;
 
         const targetArray = jenis === 'sawah' ? photosSawah : photosJalan;
-        const gridId = jenis === 'sawah' ? 'previewSawahGrid' : 'previewJalanGrid';
 
         for (let i = 0; i < files.length; i++) {
             if (targetArray.length >= 2) {
