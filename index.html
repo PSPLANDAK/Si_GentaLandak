@@ -595,7 +595,7 @@
             : totalJarak.toFixed(2) + " meter";
     }
 
-    // 4. ANALISIS SPASIAL STRICT (TITIK AWAL & AKHIR WAJIB DI DALAM LP2B) & KIRIM KE BACKEND
+    // 4. ANALISIS SPASIAL STRICT (HANYA RENDER POLIGON DALAM RADIUS 5 KM) & KIRIM KE BACKEND
     async function prosesValidasiDanAnalisis() {
         if (!polylineRute) plotKePeta(false);
 
@@ -619,13 +619,18 @@
                 cachedLp2bData = JSON.parse(jsonText);
             }
 
-            showStatusModal("Menganalisis Titik Awal & Akhir...", "Memeriksa validasi kawasan LP2B secara ketat...", true);
+            showStatusModal("Menganalisis Titik Awal & Akhir...", "Memeriksa validasi kawasan LP2B dalam radius terdekat...", true);
 
             const ptAwalObj = latLngs[0];
             const ptAkhirObj = latLngs[latLngs.length - 1];
 
             const turfPtAwal = turf.point([ptAwalObj.lng, ptAwalObj.lat]);
             const turfPtAkhir = turf.point([ptAkhirObj.lng, ptAkhirObj.lat]);
+
+            // Buat area buffer 5 KM di sekitar rute untuk membatasi poligon yang dirender (agar web ringan)
+            const lineCoordinates = latLngs.map(point => [point.lng, point.lat]);
+            const line = turf.lineString(lineCoordinates);
+            const bufferedSearchZone = turf.buffer(line, 5, { units: 'kilometers' });
 
             let isAwalInLP2B = false;
             let isAkhirInLP2B = false;
@@ -634,6 +639,14 @@
 
             L.geoJSON(cachedLp2bData, {
                 pane: 'lp2bPane',
+                filter: function(feature) {
+                    try {
+                        // Hanya ambil poligon yang beririsan dengan zona radius 5 km dari rute
+                        return turf.booleanIntersects(bufferedSearchZone, feature);
+                    } catch (e) {
+                        return false;
+                    }
+                },
                 style: function(feature) {
                     if (!feature || !feature.geometry) return { color: "#95a5a6", weight: 1, fillColor: "#bdc3c7", fillOpacity: 0.2 };
                     
@@ -651,6 +664,16 @@
                         return { color: "#27ae60", weight: 2.5, fillColor: "#27ae60", fillOpacity: 0.65 };
                     }
                     return { color: "#95a5a6", weight: 1, fillColor: "#bdc3c7", fillOpacity: 0.2 };
+                },
+                onEachFeature: function(feature, layer) {
+                    let popupInfo = "<b>🌱 Kawasan LP2B Terdekat</b>";
+                    if (feature.properties) {
+                        const kec = feature.properties.WADMKC || feature.properties.kecamatan;
+                        const desa = feature.properties.WADMKD || feature.properties.desa;
+                        if (kec) popupInfo += `<br>Kecamatan: ${kec}`;
+                        if (desa) popupInfo += `<br>Desa: ${desa}`;
+                    }
+                    layer.bindPopup(popupInfo);
                 }
             }).addTo(layerLp2b);
 
