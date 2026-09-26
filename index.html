@@ -406,9 +406,9 @@
 <script>
     let photosSawah = [];
     let photosJalan = [];
-    let cachedLp2bData = null; // Menyimpan cache GeoJSON setelah didownload
+    let cachedLp2bData = null; 
 
-    // 1. Inisialisasi Peta Standar (Kawasan Kab. Landak)
+    // 1. Inisialisasi Peta
     const map = L.map('map', { zoomControl: false }).setView([0.3847, 109.9532], 11);
 
     map.createPane('lp2bPane');
@@ -470,7 +470,7 @@
         }
     }
 
-    // 3. FUNGSI UTAMA: PROSES KIRIM BERKAS DAN ANALISIS SPASIAL LP2B
+    // 3. FUNGSI ANALISIS SPASIAL + TAMPILKAN LP2B AREA TERDEKAT (RADIUS 5 KM)
     async function prosesValidasiDanAnalisis() {
         const latAwal = parseFloat(document.getElementById('lat_awal').value);
         const lonAwal = parseFloat(document.getElementById('lon_awal').value);
@@ -482,14 +482,10 @@
             return;
         }
 
-        // Tampilkan Rute di Peta jika belum
         plotKePeta();
-
-        // Tampilkan Modal/Banner Loading
-        showStatusModal("Mengekstrak Data LP2B...", "Mohon tunggu, sedang melakukan kroscek spasial", true);
+        showStatusModal("Mengekstrak Data LP2B...", "Mohon tunggu, sedang memuat spasial wilayah...", true);
 
         try {
-            // Cek apakah data GeoJSON LP2B sudah tersimpan di cache memori
             if (!cachedLp2bData) {
                 const response = await fetch("lp2b_indonesia.zip");
                 if (!response.ok) throw new Error("File LP2B tidak ditemukan");
@@ -501,33 +497,41 @@
                 cachedLp2bData = JSON.parse(jsonText);
             }
 
-            showStatusModal("Menganalisis Keterkaitan LP2B...", "Memeriksa tumpang tindih lokasi...", true);
+            showStatusModal("Menganalisis Keterkaitan LP2B...", "Memeriksa tumpang tindih & area sekitar...", true);
 
-            // Buat objek garis dengan Turf.js untuk analisis spasial
+            // 1. Buat Garis Rute
             const line = turf.lineString([[lonAwal, latAwal], [lonAkhir, latAkhir]]);
             
-            let isInsideLp2b = false;
+            // 2. Buat Zone/Buffer Radius 5 Kilometer di sekitar rute
+            const bufferedSearchZone = turf.buffer(line, 5, { units: 'kilometers' });
+
+            let isDirectIntersect = false;
             let countIntersect = 0;
+            let countNearby = 0;
 
             layerLp2b.clearLayers();
 
-            // Lakukan kalkulasi spasial cepat
+            // 3. Filter & Munculkan Poligon LP2B yang Berada di Radius 5 KM dari Rute
             L.geoJSON(cachedLp2bData, {
                 pane: 'lp2bPane',
-                style: {
-                    color: "#2ecc71",
-                    weight: 2,
-                    fillColor: "#27ae60",
-                    fillOpacity: 0.5
+                style: function(feature) {
+                    const intersectsDirect = turf.booleanIntersects(line, feature);
+                    if (intersectsDirect) {
+                        return { color: "#e74c3c", weight: 2.5, fillColor: "#27ae60", fillOpacity: 0.65 };
+                    }
+                    return { color: "#2ecc71", weight: 1.5, fillColor: "#27ae60", fillOpacity: 0.35 };
                 },
                 filter: function(feature) {
-                    // Hanya render poligon LP2B yang bersinggungan / dekat dengan rute jalan saja
                     try {
-                        const intersects = turf.booleanIntersects(line, feature);
-                        if (intersects) {
-                            isInsideLp2b = true;
-                            countIntersect++;
-                            return true;
+                        // Cek apakah poligon LP2B ini berada di dalam zona radius 5 km
+                        const inNearbyZone = turf.booleanIntersects(bufferedSearchZone, feature);
+                        if (inNearbyZone) {
+                            countNearby++;
+                            if (turf.booleanIntersects(line, feature)) {
+                                isDirectIntersect = true;
+                                countIntersect++;
+                            }
+                            return true; // Render poligon terdekat ke peta
                         }
                     } catch (e) {
                         return false;
@@ -535,25 +539,41 @@
                     return false;
                 },
                 onEachFeature: function(feature, layer) {
-                    layer.bindPopup("<b>LOKASI TERMASUK KAWASAN LP2B</b>");
+                    let popupInfo = "<b>🌱 Kawasan LP2B</b>";
+                    if (feature.properties) {
+                        const kec = feature.properties.WADMKC || feature.properties.kecamatan;
+                        const desa = feature.properties.WADMKD || feature.properties.desa;
+                        if (kec) popupInfo += `<br>Kecamatan: ${kec}`;
+                        if (desa) popupInfo += `<br>Desa: ${desa}`;
+                    }
+                    layer.bindPopup(popupInfo);
                 }
             }).addTo(layerLp2b);
 
-            // Tampilkan Hasil Analisis
-            if (isInsideLp2b) {
+            // 4. Tampilkan Notifikasi & Status Hasil Analisis
+            if (isDirectIntersect) {
                 showStatusModal(
                     "✅ ANALISIS SELESAI: MASUK KAWASAN LP2B", 
-                    `Rencana jalan beririsan dengan ${countIntersect} area Lahan Pertanian Pangan Berkelanjutan (LP2B).`, 
+                    `Rencana jalan beririsan langsung dengan ${countIntersect} poligon LP2B.`, 
                     false, 
                     "var(--success)"
                 );
             } else {
-                showStatusModal(
-                    "ℹ️ ANALISIS SELESAI: DILUAR LP2B", 
-                    "Lokasi rencana jalan berada di luar kawasan LP2B.", 
-                    false, 
-                    "var(--primary)"
-                );
+                if (countNearby > 0) {
+                    showStatusModal(
+                        "ℹ️ ANALISIS SELESAI: DILUAR LP2B", 
+                        `Lokasi rencana jalan berada di luar LP2B. (Menampilkan ${countNearby} area LP2B di sekitarnya).`, 
+                        false, 
+                        "var(--primary)"
+                    );
+                } else {
+                    showStatusModal(
+                        "ℹ️ ANALISIS SELESAI: DILUAR LP2B", 
+                        "Tidak ditemukan kawasan LP2B dalam radius 5 km dari lokasi pengajuan.", 
+                        false, 
+                        "var(--primary)"
+                    );
+                }
             }
 
         } catch (err) {
