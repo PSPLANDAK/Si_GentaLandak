@@ -277,7 +277,7 @@
     // 1. Inisialisasi Peta
     const map = L.map('map', { zoomControl: false }).setView([0.3847, 109.9532], 12);
 
-    // 2. Custom Pane
+    // 2. Custom Pane untuk mengontrol urutan layer
     map.createPane('lp2bPane');
     map.getPane('lp2bPane').style.zIndex = 400;
 
@@ -295,14 +295,28 @@
     // 4. Feature Group Rute
     const layerRute = new L.FeatureGroup({ pane: 'rutePane' }).addTo(map);
 
-    // 5. Load GeoJSON LP2B dari GitHub Releases
-    fetch("https://github.com/andrimegi325-cyber/web-jalan-tani/releases/download/v1.0/lp2b_indonesia.geojson")
-        .then(res => {
-            if (!res.ok) throw new Error("GeoJSON LP2B tidak ditemukan");
-            return res.json();
-        })
-        .then(data => {
-            const lp2bLayer = L.geoJSON(data, {
+    // 5. Fungsi Memuat GeoJSON dengan Fallback Link
+    const geojsonUrls = [
+        "https://cdn.jsdelivr.net/gh/andrimegi325-cyber/web-jalan-tani@v1.0/lp2b_indonesia.geojson",
+        "https://github.com/andrimegi325-cyber/web-jalan-tani/releases/download/v1.0/lp2b_indonesia.geojson"
+    ];
+
+    async function loadGeoJson() {
+        let loadedData = null;
+        for (const url of geojsonUrls) {
+            try {
+                const res = await fetch(url);
+                if (res.ok) {
+                    loadedData = await res.json();
+                    break;
+                }
+            } catch (e) {
+                console.warn("Gagal memuat dari " + url + ", mencoba URL cadangan...", e);
+            }
+        }
+
+        if (loadedData) {
+            const lp2bLayer = L.geoJSON(loadedData, {
                 pane: 'lp2bPane',
                 style: { 
                     color: "#2ecc71", 
@@ -328,8 +342,12 @@
             if (lp2bLayer.getLayers().length > 0) {
                 map.fitBounds(lp2bLayer.getBounds(), { padding: [30, 30] });
             }
-        })
-        .catch(err => console.error("Error memuat LP2B:", err));
+        } else {
+            console.error("Gagal memuat GeoJSON LP2B dari seluruh sumber.");
+        }
+    }
+
+    loadGeoJson();
 
     setTimeout(() => {
         map.invalidateSize();
