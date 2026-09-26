@@ -721,7 +721,7 @@
         modal.style.display = 'flex';
     }
 
-    // FUNGSI UNTUK MEMUAT DATA DARI SPREADSHEET KE PETA
+    // FUNGSI MEMUAT DATA DARI SPREADSHEET (Disesuaikan dengan kolom "Lat/Lon Awal")
     async function muatDataDariSpreadsheet() {
         try {
             if (!cachedLp2bData) {
@@ -743,8 +743,15 @@
             if (!Array.isArray(dataRows) || dataRows.length === 0) return;
 
             dataRows.forEach(row => {
-                const lat = parseFloat(row.lat_awal);
-                const lon = parseFloat(row.lon_awal);
+                const rawCoordAwal = row["Lat/Lon Awal"] || row["lat_awal"] || "";
+                let lat = NaN;
+                let lon = NaN;
+
+                if (typeof rawCoordAwal === "string" && rawCoordAwal.includes(",")) {
+                    const parts = rawCoordAwal.split(",");
+                    lat = parseFloat(parts[0].trim());
+                    lon = parseFloat(parts[1].trim());
+                }
 
                 if (isNaN(lat) || isNaN(lon)) return;
 
@@ -752,16 +759,16 @@
                 const pinTersimpan = L.marker([lat, lon]).addTo(layerDataTersimpan);
                 pinTersimpan.bindPopup(`
                     <div style="font-family: sans-serif; font-size: 13px;">
-                        <b>🌾 Poktan: ${row.nama_poktan || 'Tidak diketahui'}</b><br>
-                        <b>Kecamatan:</b> ${row.kecamatan || '-'}<br>
-                        <b>Desa:</b> ${row.desa || '-'}<br>
-                        <b>Ketua:</b> ${row.nama_ketua || '-'}<br>
-                        <b>Panjang Jalan:</b> ${row.panjang_jalan || '-'}<br>
+                        <b>🌾 Poktan: ${row["Nama Poktan"] || 'Tidak diketahui'}</b><br>
+                        <b>Kecamatan:</b> ${row["Kecamatan"] || '-'}<br>
+                        <b>Desa:</b> ${row["Desa"] || '-'}<br>
+                        <b>Ketua:</b> ${row["Nama Ketua"] || '-'}<br>
+                        <b>Panjang Jalan:</b> ${row["Panjang Jalan"] || '-'}<br>
                         <span style="color: var(--success); font-weight: bold;">Status: Tersimpan di Database</span>
                     </div>
                 `);
 
-                // 2. Tampilkan Poligon LP2B yang HANYA kena ke titik awal koordinat tersebut
+                // 2. Tampilkan Poligon LP2B yang HANYA kena ke titik koordinat awal tersebut
                 if (cachedLp2bData) {
                     const ptAwal = turf.point([lon, lat]);
 
@@ -781,7 +788,7 @@
                             fillOpacity: 0.5
                         },
                         onEachFeature: function(feature, layer) {
-                            layer.bindPopup(`<b>🌱 Kawasan LP2B Pengajuan</b><br>Poktan: ${row.nama_poktan}`);
+                            layer.bindPopup(`<b>🌱 Kawasan LP2B Pengajuan</b><br>Poktan: ${row["Nama Poktan"] || 'Poktan'}`);
                         }
                     }).addTo(layerDataTersimpan);
                 }
@@ -908,7 +915,6 @@
     async function kirimDataKeBackend() {
         showStatusModal("Mengirim Data...", "Menyimpan data ke server dan spreadsheet...", true);
         
-        // Simulasi pengiriman data atau implementasi fetch ke GOOGLE_SCRIPT_URL
         setTimeout(() => {
             document.getElementById('statusModal').style.display = 'none';
             alert("🎉 Berhasil! Data pengajuan telah dikirim.");
@@ -919,7 +925,7 @@
     }
 
     function handleFotoUpload(input, jenis) {
-        // Fungsi handler foto tetap aman
+        // Fungsi handler foto
     }
 </script>
 </body>
