@@ -8,7 +8,7 @@
     <!-- PUSTAKA PETA LEAFLET CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
-    <!-- PUSTAKA LEAFLET GEOMAN (UNTUK GARIS BISA DIBELOK-BELOKKAN / EDITABLE) -->
+    <!-- PUSTAKA LEAFLET GEOMAN (UNTUK GARIS BISA DIBELOK-BELOKKAN) -->
     <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
 
     <!-- PUSTAKA JSZIP & TURF.JS UNTUK ANALISIS SPASIAL -->
@@ -40,7 +40,6 @@
             overflow: hidden;
         }
 
-        /* CONTAINER UTAMA */
         .app-wrapper {
             display: flex;
             flex-direction: row;
@@ -49,7 +48,6 @@
             overflow: hidden;
         }
 
-        /* KOLOM FORMULIR INPUT */
         .sidebar-form {
             width: 450px;
             min-width: 320px;
@@ -62,7 +60,6 @@
             z-index: 10;
         }
 
-        /* KOLOM PETA PENUH */
         .map-container {
             flex: 1;
             position: relative;
@@ -75,7 +72,6 @@
             height: 100%;
         }
 
-        /* KOTAK PENCARIAN LOKASI DI ATAS PETA */
         .search-box-container {
             position: absolute;
             top: 20px;
@@ -116,7 +112,6 @@
             background-color: #0c2461;
         }
 
-        /* MODAL / BANNER PROSES ANALISIS */
         .status-modal {
             position: absolute;
             top: 75px;
@@ -287,7 +282,6 @@
             background-color: #219653;
         }
 
-        /* MEDIA QUERIES (MOBILE / HP) */
         @media screen and (max-width: 768px) {
             body, html {
                 overflow: auto;
@@ -386,7 +380,7 @@
 
             <!-- INPUT KOORDINAT -->
             <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
-            <label style="color: var(--primary);">📍 Input Koordinat Jalan (Tarik Garis / Pin di Peta untuk Dikelokkan)</label>
+            <label style="color: var(--primary);">📍 Input Koordinat Jalan (Wajib Masuk LP2B di Titik Awal & Akhir)</label>
             <p style="font-size: 11px; color: #7f8c8d; margin: 2px 0 10px 0;">Format desimal: Lat (Y), Lon (X: 109.xxxx)</p>
 
             <div class="form-row">
@@ -431,7 +425,7 @@
 
             <div class="summary-card">
                 <div class="summary-item">
-                    <label>📏 Total Panjang Jalan (Mengikuti Kelok):</label>
+                    <label>📏 Total Panjang Jalan:</label>
                     <span id="lbl-panjang" style="color: var(--success); font-size: 15px; font-weight: bold;">0 meter</span>
                 </div>
             </div>
@@ -471,7 +465,6 @@
     let photosJalan = [];
     let cachedLp2bData = null; 
     let searchMarker = null;
-
     let polylineRute = null;
 
     // 1. Inisialisasi Peta
@@ -483,7 +476,6 @@
     map.createPane('rutePane');
     map.getPane('rutePane').style.zIndex = 600;
 
-    // Basemap Citra Satelit Esri
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri'
     }).addTo(map);
@@ -525,28 +517,13 @@
                 if (searchMarker) map.removeLayer(searchMarker);
                 searchMarker = L.marker([lat, lon]).addTo(map).bindPopup(`<b>${data[0].display_name}</b>`).openPopup();
                 map.flyTo([lat, lon], 14);
-            } else {
-                const resGlobal = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-                const dataGlobal = await resGlobal.json();
-
-                if (dataGlobal && dataGlobal.length > 0) {
-                    const lat = parseFloat(dataGlobal[0].lat);
-                    const lon = parseFloat(dataGlobal[0].lon);
-
-                    if (searchMarker) map.removeLayer(searchMarker);
-                    searchMarker = L.marker([lat, lon]).addTo(map).bindPopup(`<b>${dataGlobal[0].display_name}</b>`).openPopup();
-                    map.flyTo([lat, lon], 14);
-                } else {
-                    alert('Lokasi tidak ditemukan. Coba ketik nama desa/kecamatan lebih spesifik atau gunakan koordinat desimal.');
-                }
             }
         } catch (e) {
             console.error(e);
-            alert('Gagal terhubung ke layanan pencarian.');
         }
     }
 
-    // 3. FUNGSI PLOT RUTE DENGAN GARIS YANG BISA DIBELOK-BELOKKAN
+    // 3. PLOT RUTE PETA
     function plotKePeta(autoZoom = true) {
         layerRute.clearLayers();
 
@@ -559,25 +536,19 @@
             const titikAwal = L.latLng(latAwal, lonAwal);
             const titikAkhir = L.latLng(latAkhir, lonAkhir);
 
-            // Buat Garis Penghubung Interaktif
             polylineRute = L.polyline([titikAwal, titikAkhir], { 
                 pane: 'rutePane',
                 color: '#e74c3c', 
                 weight: 5 
             }).addTo(layerRute);
 
-            // Aktifkan mode edit Geoman agar garis bisa ditarik/dibelokkan di tengahnya
-            polylineRute.pm.enable({
-                allowSelfIntersection: false
-            });
+            polylineRute.pm.enable({ allowSelfIntersection: false });
 
-            // Event saat garis diubah/dikelokkan
             polylineRute.on('pm:edit', updateFormDanJarak);
             polylineRute.on('pm:vertexadded', updateFormDanJarak);
             polylineRute.on('pm:vertexremoved', updateFormDanJarak);
             polylineRute.on('pm:markerdrag', updateFormDanJarak);
 
-            // Zoom Peta
             if (autoZoom) {
                 if (titikAwal.equals(titikAkhir)) {
                     map.setView(titikAwal, 15);
@@ -587,38 +558,28 @@
             }
 
             updateHitungJarakLengkung();
-
-            if (autoZoom && window.innerWidth <= 768) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
         } else {
-            if (autoZoom) alert("Harap isi seluruh koordinat Latitude dan Longitude terlebih dahulu!");
+            if (autoZoom) alert("Harap isi seluruh koordinat Latitude dan Longitude!");
         }
     }
 
-    // Update Input Formulir & Hitung Total Jarak Berkelok Secara Realtime
     function updateFormDanJarak() {
         if (!polylineRute) return;
-
         const latLngs = polylineRute.getLatLngs();
         if (latLngs.length > 0) {
             const awal = latLngs[0];
             const akhir = latLngs[latLngs.length - 1];
 
-            // Update Input Form untuk Titik Awal & Ujung Akhir Jalan
             document.getElementById('lat_awal').value = awal.lat.toFixed(6);
             document.getElementById('lon_awal').value = awal.lng.toFixed(6);
             document.getElementById('lat_akhir').value = akhir.lat.toFixed(6);
             document.getElementById('lon_akhir').value = akhir.lng.toFixed(6);
         }
-
         updateHitungJarakLengkung();
     }
 
-    // Kalkulasi Total Jarak Berkelok Mengikuti Setiap Segmen Garis
     function updateHitungJarakLengkung() {
         if (!polylineRute) return;
-        
         const latLngs = polylineRute.getLatLngs();
         let totalJarak = 0;
 
@@ -631,20 +592,17 @@
             : totalJarak.toFixed(2) + " meter";
     }
 
-    // 4. FUNGSI ANALISIS SPASIAL + TAMPILKAN LP2B AREA TERDEKAT (RADIUS 5 KM)
+    // 4. ANALISIS SPASIAL STRICT (TITIK AWAL & AKHIR WAJIB DI DALAM LP2B)
     async function prosesValidasiDanAnalisis() {
-        if (!polylineRute) {
-            alert("Harap tampilkan rute terlebih dahulu!");
-            return;
-        }
+        if (!polylineRute) plotKePeta(false);
 
-        const latLngs = polylineRute.getLatLngs();
+        const latLngs = polylineRute ? polylineRute.getLatLngs() : [];
         if (latLngs.length < 2) {
             alert("Rute jalan tidak valid!");
             return;
         }
 
-        showStatusModal("Mengekstrak Data LP2B...", "Mohon tunggu, sedang memuat spasial wilayah...", true);
+        showStatusModal("Mengekstrak Data LP2B...", "Mohon tunggu, memuat data spasial wilayah...", true);
 
         try {
             if (!cachedLp2bData) {
@@ -658,37 +616,46 @@
                 cachedLp2bData = JSON.parse(jsonText);
             }
 
-            showStatusModal("Menganalisis Keterkaitan LP2B...", "Memeriksa tumpang tindih & area sekitar...", true);
+            showStatusModal("Menganalisis Titik Awal & Akhir...", "Memeriksa validasi kawasan LP2B secara ketat...", true);
 
-            // Ubah garis belokan Leaflet ke Turf LineString
+            // Ambil titik awal dan titik akhir dari ujung garis
+            const ptAwalObj = latLngs[0];
+            const ptAkhirObj = latLngs[latLngs.length - 1];
+
+            const turfPtAwal = turf.point([ptAwalObj.lng, ptAwalObj.lat]);
+            const turfPtAkhir = turf.point([ptAkhirObj.lng, ptAkhirObj.lat]);
+
+            let isAwalInLP2B = false;
+            let isAkhirInLP2B = false;
+            let countNearby = 0;
+
+            // Buat area buffer 5 KM di sekitar garis untuk efisiensi render peta pendukung
             const lineCoordinates = latLngs.map(point => [point.lng, point.lat]);
             const line = turf.lineString(lineCoordinates);
             const bufferedSearchZone = turf.buffer(line, 5, { units: 'kilometers' });
-
-            let isDirectIntersect = false;
-            let countIntersect = 0;
-            let countNearby = 0;
 
             layerLp2b.clearLayers();
 
             L.geoJSON(cachedLp2bData, {
                 pane: 'lp2bPane',
                 style: function(feature) {
-                    const intersectsDirect = turf.booleanIntersects(line, feature);
-                    if (intersectsDirect) {
-                        return { color: "#e74c3c", weight: 2.5, fillColor: "#27ae60", fillOpacity: 0.65 };
+                    // Cek apakah titik awal atau titik akhir berada di dalam poligon ini
+                    const inAwal = turf.booleanPointInPolygon(turfPtAwal, feature);
+                    const inAkhir = turf.booleanPointInPolygon(turfPtAkhir, feature);
+
+                    if (inAwal) isAwalInLP2B = true;
+                    if (inAkhir) isAkhirInLP2B = true;
+
+                    if (inAwal || inAkhir) {
+                        return { color: "#27ae60", weight: 2.5, fillColor: "#27ae60", fillOpacity: 0.65 };
                     }
-                    return { color: "#2ecc71", weight: 1.5, fillColor: "#27ae60", fillOpacity: 0.35 };
+                    return { color: "#95a5a6", weight: 1, fillColor: "#bdc3c7", fillOpacity: 0.2 };
                 },
                 filter: function(feature) {
                     try {
                         const inNearbyZone = turf.booleanIntersects(bufferedSearchZone, feature);
                         if (inNearbyZone) {
                             countNearby++;
-                            if (turf.booleanIntersects(line, feature)) {
-                                isDirectIntersect = true;
-                                countIntersect++;
-                            }
                             return true;
                         }
                     } catch (e) {
@@ -708,29 +675,30 @@
                 }
             }).addTo(layerLp2b);
 
-            if (isDirectIntersect) {
+            // Logika Validasi Ketat: Keduanya (Awal & Akhir) HARUS di dalam LP2B
+            if (isAwalInLP2B && isAkhirInLP2B) {
                 showStatusModal(
-                    "✅ ANALISIS SELESAI: MASUK KAWASAN LP2B", 
-                    `Rencana jalan beririsan langsung dengan ${countIntersect} poligon LP2B.`, 
+                    "✅ ANALISIS SELESAI: VALID DALAM LP2B", 
+                    "Titik Awal DAN Titik Akhir pengajuan rute sepenuhnya berada di dalam kawasan LP2B.", 
                     false, 
                     "var(--success)"
                 );
             } else {
-                if (countNearby > 0) {
-                    showStatusModal(
-                        "ℹ️ ANALISIS SELESAI: DILUAR LP2B", 
-                        `Lokasi rencana jalan berada di luar LP2B. (Menampilkan ${countNearby} area LP2B di sekitarnya).`, 
-                        false, 
-                        "var(--primary)"
-                    );
+                let alasan = "";
+                if (!isAwalInLP2B && !isAkhirInLP2B) {
+                    alasan = "Titik Awal dan Titik Akhir keduanya berada di luar LP2B.";
+                } else if (!isAwalInLP2B) {
+                    alasan = "Titik Awal berada di luar kawasan LP2B.";
                 } else {
-                    showStatusModal(
-                        "ℹ️ ANALISIS SELESAI: DILUAR LP2B", 
-                        "Tidak ditemukan kawasan LP2B dalam radius 5 km dari lokasi pengajuan.", 
-                        false, 
-                        "var(--primary)"
-                    );
+                    alasan = "Titik Akhir berada di luar kawasan LP2B.";
                 }
+
+                showStatusModal(
+                    "❌ ANALISIS SELESAI: DILUAR LP2B", 
+                    `${alasan} (Pengajuan ditolak karena wajib mencakup LP2B secara penuh pada kedua ujung titik).`, 
+                    false, 
+                    "var(--danger)"
+                );
             }
 
         } catch (err) {
