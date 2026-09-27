@@ -74,7 +74,7 @@
             object-fit: contain;
         }
 
-        /* HALAMAN UTAMA / LANDING PAGE (BACKGROUND PUTIH) */
+        /* HALAMAN UTAMA / LANDING PAGE */
         #landing-page {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -213,7 +213,7 @@
     </div>
 </div>
 
-<!-- LANDING PAGE (HALAMAN UTAMA - BACKGROUND PUTIH) -->
+<!-- LANDING PAGE -->
 <div id="landing-page">
     <img src="Logo Home.png" alt="Logo Home" class="landing-logo-animated" onerror="this.style.display='none'">
     <h1 style="font-size: clamp(20px, 4.5vw, 32px); margin-bottom: 5px; color: var(--primary);">SISTEM INFORMASI GEOGRAFIS JUT & HORTI</h1>
@@ -430,6 +430,27 @@
         }
     }
 
+    async function muatDataLP2BGlobal() {
+        if (cachedLp2bData) return cachedLp2bData;
+        try {
+            const urlFile = "https://raw.githubusercontent.com/andrimegi325-cyber/web-jalan-tani/main/lp2b_indonesia.zip";
+            const res = await fetch(urlFile);
+            if (!res.ok) throw new Error("Gagal mengambil file zip dari GitHub.");
+            
+            const blob = await res.arrayBuffer();
+            const zip = await JSZip.loadAsync(blob);
+            const filename = Object.keys(zip.files)[0];
+            const content = await zip.file(filename).async("text");
+            
+            cachedLp2bData = JSON.parse(content);
+            return cachedLp2bData;
+        } catch (e) {
+            console.error("Gagal memuat LP2B:", e);
+            alert("Gagal memuat data poligon LP2B. Pastikan repository publik dan nama file benar.");
+            return null;
+        }
+    }
+
     // ================= PETA HALAMAN 1: PENGECEKAN TITIK =================
     const mapCheck = L.map('mapCheck', { zoomControl: false }).setView([0.3847, 109.9532], 11);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -439,20 +460,6 @@
 
     let checkMarker = null;
     let checkLp2bLayer = new L.FeatureGroup().addTo(mapCheck);
-
-    async function muatDataLP2BGlobal() {
-        if (cachedLp2bData) return cachedLp2bData;
-        try {
-            const res = await fetch("lp2b_indonesia.zip");
-            const blob = await res.arrayBuffer();
-            const zip = await JSZip.loadAsync(blob);
-            cachedLp2bData = JSON.parse(await zip.file(Object.keys(zip.files)[0]).async("text"));
-            return cachedLp2bData;
-        } catch (e) {
-            console.error("Gagal memuat LP2B:", e);
-            return null;
-        }
-    }
 
     async function prosesAnalisisCheckPoint(lat, lon, labelInfo) {
         showStatusModal("Analisis Spasial...", "Memeriksa status kawasan LP2B...", true);
@@ -467,7 +474,6 @@
         let minDistance = Infinity;
 
         if (lp2b && lp2b.features) {
-            // 1. Cek apakah titik berada di dalam salah satu poligon LP2B
             for (let f of lp2b.features) {
                 try {
                     if (turf.booleanPointInPolygon(pt, f)) {
@@ -478,7 +484,6 @@
                 } catch (err) {}
             }
 
-            // 2. Jika tidak di dalam, cari poligon LP2B terdekat agar tidak berat
             if (!masukLp2b) {
                 lp2b.features.forEach(f => {
                     try {
@@ -492,7 +497,6 @@
             }
         }
 
-        // Tampilkan Poligon LP2B yang cocok (yang sedang dimasuki atau terdekat)
         if (targetPolygonFeature) {
             L.geoJSON(targetPolygonFeature, {
                 style: {
@@ -507,12 +511,9 @@
         if (checkMarker) mapCheck.removeLayer(checkMarker);
         checkMarker = L.marker([lat, lon], { draggable: true }).addTo(mapCheck);
         
-        let statusTeks = "";
-        if (masukLp2b) {
-            statusTeks = `<span style="color:var(--success); font-weight:bold;">✔ MASUK KAWASAN LP2B</span>`;
-        } else {
-            statusTeks = `<span style="color:var(--danger); font-weight:bold;">❌ DI LUAR KAWASAN LP2B</span><br><small>Menampilkan LP2B terdekat (±${minDistance.toFixed(2)} km)</small>`;
-        }
+        let statusTeks = masukLp2b 
+            ? `<span style="color:var(--success); font-weight:bold;">✔ MASUK KAWASAN LP2B</span>`
+            : `<span style="color:var(--danger); font-weight:bold;">❌ DI LUAR KAWASAN LP2B</span><br><small>LP2B terdekat (±${minDistance.toFixed(2)} km)</small>`;
 
         checkMarker.bindPopup(`<b>${labelInfo}</b><br>Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}<br>${statusTeks}<br><i>Pin bisa digeser!</i>`).openPopup();
 
