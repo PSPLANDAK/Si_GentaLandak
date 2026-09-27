@@ -74,7 +74,7 @@
             object-fit: contain;
         }
 
-        /* HALAMAN UTAMA / LANDING PAGE (BACKGROUND PUTIH) */
+        /* HALAMAN UTAMA / LANDING PAGE */
         #landing-page {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -143,8 +143,8 @@
             display: flex; flex-direction: column; gap: 10px; max-height: 80vh; overflow-y: auto;
         }
 
-        .check-floating-panel input {
-            padding: 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
+        .check-floating-panel input, .list-floating-panel input {
+            padding: 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%;
         }
 
         .btn-action-check {
@@ -157,7 +157,7 @@
             padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;
         }
 
-        /* KOMPONEN BREAKDOWN WILAYAH */
+        /* KOMPONEN BREAKDOWN WILAYAH & PENCARIAN */
         .tree-kecamatan-header, .tree-desa-header {
             background: #f1f2f6; border: 1px solid var(--border); padding: 8px 10px;
             border-radius: 6px; font-size: 13px; font-weight: bold; color: var(--primary);
@@ -175,7 +175,12 @@
 
         .btn-all-data {
             background-color: var(--success); color: white; border: none; padding: 10px;
-            border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 5px;
+            border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; width: 100%;
+        }
+        
+        .btn-admin-panel {
+            background-color: #8e44ad; color: white; border: none; padding: 10px;
+            border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px;
         }
 
         /* STYLE HALAMAN PENGAJUAN FORM */
@@ -249,7 +254,7 @@
         <div class="landing-card" onclick="bukaHalaman('list-page')">
             <span>📋</span>
             <h3>Daftar Pengajuan Poktan</h3>
-            <p>Lihat daftar kelompok tani terstruktur per wilayah, peta sebaran pin, & analisis LP2B.</p>
+            <p>Lihat daftar kelompok tani terstruktur per wilayah, pencarian, peta sebaran, & unduh data.</p>
         </div>
         <div class="landing-card" onclick="bukaHalaman('form-page')">
             <span>📝</span>
@@ -276,15 +281,23 @@
     </div>
 </div>
 
-<!-- HALAMAN: DAFTAR PENGAJUAN POKTAN (BREAKDOWN WILAYAH) -->
+<!-- HALAMAN: DAFTAR PENGAJUAN POKTAN (BREAKDOWN, PENCARIAN & DOWNLOAD) -->
 <div id="list-page" class="page-section">
     <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️ Menu Utama</button>
     <div class="list-map-container">
         <div class="list-floating-panel">
             <h4 style="margin: 0 0 3px 0; color: var(--primary);">Daftar Pengajuan Poktan</h4>
-            <p style="font-size: 11.5px; color: #666; margin: 0 0 8px 0;">Pilih Kecamatan ➔ Desa ➔ Poktan, atau tampilkan semua data sekaligus.</p>
-            <button class="btn-all-data" onclick="tampilkanSemuaDataPoktan()">🌐 Lihat Semua Data</button>
-            <div id="containerTreePoktan" style="display: flex; flex-direction: column; gap: 6px; margin-top: 5px;">
+            <p style="font-size: 11.5px; color: #666; margin: 0 0 8px 0;">Cari poktan atau telusuri wilayah di bawah ini.</p>
+            
+            <!-- INPUT PENCARIAN POKTAN -->
+            <input type="text" id="inputCariPoktan" placeholder="🔍 Cari nama poktan, ketua, atau desa..." oninput="filterDataPoktan(this.value)">
+
+            <div style="display: flex; gap: 5px; margin-top: 8px;">
+                <button class="btn-all-data" onclick="tampilkanSemuaDataPoktan()" style="flex: 1;">🌐 Semua Pin</button>
+                <button class="btn-admin-panel" onclick="verifikasiAdminDownload()" style="flex: 1; margin-top:0;">📥 Unduh Data</button>
+            </div>
+
+            <div id="containerTreePoktan" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 45vh; overflow-y: auto;">
                 <i style="font-size: 12px; color: #888;">Memuat data pengajuan...</i>
             </div>
         </div>
@@ -450,8 +463,11 @@
     };
 
     let cachedLp2bData = null;
-    let globalPoktanRows = []; // Menyimpan data mentah poktan untuk fitur tree & lihat semua
+    let globalPoktanRows = []; 
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxH6xzzZO4uYlwEvRibwb1BTZvVs4tIuEXuHK8brSzJYJKD-IY6zs7yTmqHxg4lBAhP/exec";
+    
+    // URL Google Drive untuk folder foto dokumentasi (Silakan ganti link di bawah jika perlu)
+    const GOOGLE_DRIVE_FOTO_URL = "https://drive.google.com/drive/folders/contoh_folder_id";
 
     function bukaHalaman(pageId) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
@@ -600,7 +616,7 @@
     }
 
 
-    // ================= PETA HALAMAN: DAFTAR PENGAJUAN POKTAN (BREAKDOWN & SEMUA DATA) =================
+    // ================= PETA HALAMAN: DAFTAR PENGAJUAN POKTAN =================
     const mapList = L.map('mapList', { zoomControl: false }).setView([0.3847, 109.9532], 11);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri'
@@ -619,82 +635,100 @@
         try {
             const res = await fetch(GOOGLE_SCRIPT_URL);
             globalPoktanRows = await res.json();
-            container.innerHTML = '';
+            renderTreeContainer(globalPoktanRows);
+        } catch (e) {
+            container.innerHTML = `<i style="font-size: 12px; color: var(--danger);">Gagal memuat data poktan.</i>`;
+        }
+    }
 
-            if (!Array.isArray(globalPoktanRows) || globalPoktanRows.length === 0) {
-                container.innerHTML = `<i style="font-size: 12px; color: #888;">Belum ada data pengajuan poktan.</i>`;
-                return;
-            }
+    function renderTreeContainer(dataRows) {
+        const container = document.getElementById('containerTreePoktan');
+        container.innerHTML = '';
 
-            // Grouping data berdasarkan Kecamatan lalu Desa
-            let treeData = {};
-            globalPoktanRows.forEach(r => {
-                const kec = r["Kecamatan"] || "Lainnya";
-                const desa = r["Desa"] || "Lainnya";
-                if (!treeData[kec]) treeData[kec] = {};
-                if (!treeData[kec][desa]) treeData[kec][desa] = [];
-                treeData[kec][desa].push(r);
-            });
+        if (!Array.isArray(dataRows) || dataRows.length === 0) {
+            container.innerHTML = `<i style="font-size: 12px; color: #888;">Tidak ada data ditemukan.</i>`;
+            return;
+        }
 
-            // Render Tree Menu di Sidebar
-            Object.keys(treeData).sort().forEach(kec => {
-                const kecId = "kec_" + kec.replace(/[^a-zA-Z0-9]/g, '_');
+        let treeData = {};
+        dataRows.forEach(r => {
+            const kec = r["Kecamatan"] || "Lainnya";
+            const desa = r["Desa"] || "Lainnya";
+            if (!treeData[kec]) treeData[kec] = {};
+            if (!treeData[kec][desa]) treeData[kec][desa] = [];
+            treeData[kec][desa].push(r);
+        });
+
+        Object.keys(treeData).sort().forEach(kec => {
+            const kecId = "kec_" + kec.replace(/[^a-zA-Z0-9]/g, '_');
+            
+            const kecDiv = document.createElement('div');
+            kecDiv.innerHTML = `
+                <div class="tree-kecamatan-header" onclick="toggleTreeSection('${kecId}')">
+                    <span>📁 ${kec}</span>
+                    <span style="font-size: 11px;">▼</span>
+                </div>
+                <div id="${kecId}" class="tree-desa-container" style="display: none;"></div>
+            `;
+            container.appendChild(kecDiv);
+
+            const desaContainer = kecDiv.querySelector(`#${kecId}`);
+            Object.keys(treeData[kec]).sort().forEach(desa => {
+                const desaId = kecId + "_desa_" + desa.replace(/[^a-zA-Z0-9]/g, '_');
                 
-                const kecDiv = document.createElement('div');
-                kecDiv.innerHTML = `
-                    <div class="tree-kecamatan-header" onclick="toggleTreeSection('${kecId}')">
-                        <span>📁 ${kec}</span>
-                        <span style="font-size: 11px;">▼</span>
+                const desaDiv = document.createElement('div');
+                desaDiv.innerHTML = `
+                    <div class="tree-desa-header" onclick="toggleTreeSection('${desaId}')">
+                        <span>📂 ${desa} (${treeData[kec][desa].length})</span>
+                        <span style="font-size: 10px;">▼</span>
                     </div>
-                    <div id="${kecId}" class="tree-desa-container" style="display: none;"></div>
+                    <div id="${desaId}" class="tree-poktan-container" style="display: none;"></div>
                 `;
-                container.appendChild(kecDiv);
+                desaContainer.appendChild(desaDiv);
 
-                const desaContainer = kecDiv.querySelector(`#${kecId}`);
-                Object.keys(treeData[kec]).sort().forEach(desa => {
-                    const desaId = kecId + "_desa_" + desa.replace(/[^a-zA-Z0-9]/g, '_');
-                    
-                    const desaDiv = document.createElement('div');
-                    desaDiv.innerHTML = `
-                        <div class="tree-desa-header" onclick="toggleTreeSection('${desaId}')">
-                            <span>📂 ${desa} (${treeData[kec][desa].length})</span>
-                            <span style="font-size: 10px;">▼</span>
-                        </div>
-                        <div id="${desaId}" class="tree-poktan-container" style="display: none;"></div>
+                const poktanContainer = desaDiv.querySelector(`#${desaId}`);
+                treeData[kec][desa].forEach(r => {
+                    const coord = r["Lat/Lon Awal"] || "";
+                    const poktanCard = document.createElement('div');
+                    poktanCard.className = 'poktan-tree-item';
+                    poktanCard.innerHTML = `
+                        <strong style="color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
+                        <span>Ketua: ${r["Nama Ketua"] || "-"}</span>
                     `;
-                    desaContainer.appendChild(desaDiv);
-
-                    const poktanContainer = desaDiv.querySelector(`#${desaId}`);
-                    treeData[kec][desa].forEach(r => {
-                        const coord = r["Lat/Lon Awal"] || "";
+                    poktanCard.onclick = (e) => {
+                        e.stopPropagation();
                         if (coord.includes(",")) {
                             const p = coord.split(",");
                             const lat = parseFloat(p[0]), lon = parseFloat(p[1]);
                             if (!isNaN(lat) && !isNaN(lon)) {
-                                const poktanCard = document.createElement('div');
-                                poktanCard.className = 'poktan-tree-item';
-                                poktanCard.innerHTML = `
-                                    <strong style="color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
-                                    <span>Ketua: ${r["Nama Ketua"] || "-"}</span>
-                                `;
-                                poktanCard.onclick = (e) => {
-                                    e.stopPropagation();
-                                    listMarkersGroup.clearLayers();
-                                    const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
-                                    marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Desa: ${r["Desa"] || "-"}`).openPopup();
-                                    mapList.setView([lat, lon], 16);
-                                    pilihDanTampilkanLp2bPoktan(lat, lon, r);
-                                };
-                                poktanContainer.appendChild(poktanCard);
+                                listMarkersGroup.clearLayers();
+                                const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
+                                marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Desa: ${r["Desa"] || "-"}`).openPopup();
+                                mapList.setView([lat, lon], 16);
+                                pilihDanTampilkanLp2bPoktan(lat, lon, r);
                             }
                         }
-                    });
+                    };
+                    poktanContainer.appendChild(poktanCard);
                 });
             });
+        });
+    }
 
-        } catch (e) {
-            container.innerHTML = `<i style="font-size: 12px; color: var(--danger);">Gagal memuat data poktan.</i>`;
+    function filterDataPoktan(keyword) {
+        const query = keyword.toLowerCase().trim();
+        if (!query) {
+            renderTreeContainer(globalPoktanRows);
+            return;
         }
+        const filtered = globalPoktanRows.filter(r => {
+            const poktan = (r["Nama Poktan"] || "").toLowerCase();
+            const ketua = (r["Nama Ketua"] || "").toLowerCase();
+            const desa = (r["Desa"] || "").toLowerCase();
+            const kec = (r["Kecamatan"] || "").toLowerCase();
+            return poktan.includes(query) || ketua.includes(query) || desa.includes(query) || kec.includes(query);
+        });
+        renderTreeContainer(filtered);
     }
 
     function toggleTreeSection(id) {
@@ -733,6 +767,45 @@
         if (bounds.length > 0) {
             mapList.fitBounds(bounds, { padding: [50, 50] });
         }
+    }
+
+    function verifikasiAdminDownload() {
+        const pwd = prompt("Masukkan Password Admin untuk mengunduh data:");
+        if (pwd === null) return; // Dibatalkan
+        if (pwd === "Admin123") {
+            // Berhasil, berikan opsi download spreadsheet atau buka folder Google Drive foto
+            const pilihan = confirm("Tekan [OK] untuk Unduh Spreadsheet Data (.xlsx / CSV via Web GIS),\nAtau tekan [Cancel] untuk Membuka Folder Google Drive Foto.");
+            if (pilihan) {
+                downloadSpreadsheetData();
+            } else {
+                window.open(GOOGLE_DRIVE_FOTO_URL, '_blank');
+            }
+        } else {
+            alert("❌ Password salah! Akses ditolak.");
+        }
+    }
+
+    function downloadSpreadsheetData() {
+        if (!globalPoktanRows || globalPoktanRows.length === 0) {
+            alert("Tidak ada data untuk diunduh.");
+            return;
+        }
+        let csvContent = "data:text/csv;charset=utf-8,";
+        const keys = Object.keys(globalPoktanRows[0]);
+        csvContent += keys.join(",") + "\r\n";
+
+        globalPoktanRows.forEach(row => {
+            let line = keys.map(k => `"${(row[k] || "").toString().replace(/"/g, '""')}"`).join(",");
+            csvContent += line + "\r\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "Data_Pengajuan_Poktan_Landak.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     async function pilihDanTampilkanLp2bPoktan(lat, lon, dataPoktan) {
