@@ -28,24 +28,17 @@
         * { box-sizing: border-box; }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
+            margin: 0; padding: 0; height: 100%; width: 100%;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-main);
-            overflow: hidden;
+            background-color: var(--bg-main); overflow: hidden;
         }
 
         /* STYLE SPLASH SCREEN */
         #splash-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #ffffff;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 999999;
-            transition: opacity 0.5s ease;
-            gap: 15px; padding: 20px; text-align: center;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #ffffff; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 999999;
+            transition: opacity 0.5s ease; gap: 15px; padding: 20px; text-align: center;
         }
 
         @keyframes kedipAnim {
@@ -56,40 +49,29 @@
 
         .splash-content-animated {
             display: flex; flex-direction: column; align-items: center; gap: 15px;
-            animation: kedipAnim 1.5s infinite ease-in-out;
-            max-width: 100%;
+            animation: kedipAnim 1.5s infinite ease-in-out; max-width: 100%;
         }
 
         .splash-title {
-            font-size: clamp(24px, 6vw, 36px);
-            font-weight: 900;
-            color: #27ae60;
-            letter-spacing: 2px;
-            text-transform: uppercase;
+            font-size: clamp(24px, 6vw, 36px); font-weight: 900;
+            color: #27ae60; letter-spacing: 2px; text-transform: uppercase;
         }
 
         #splash-screen img {
-            width: clamp(140px, 45vw, 220px);
-            height: auto; 
-            object-fit: contain;
+            width: clamp(140px, 45vw, 220px); height: auto; object-fit: contain;
         }
 
-        /* HALAMAN UTAMA / LANDING PAGE (BACKGROUND PUTIH) */
+        /* HALAMAN UTAMA / LANDING PAGE */
         #landing-page {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #ffffff;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 10000; padding: 20px; text-align: center; color: var(--dark);
-            overflow-y: auto;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 10000; 
+            padding: 20px; text-align: center; color: var(--dark); overflow-y: auto;
         }
 
         .landing-logo-animated {
-            width: clamp(130px, 40vw, 200px);
-            height: auto;
-            object-fit: contain;
-            margin-bottom: 15px;
-            animation: kedipAnim 2s infinite ease-in-out;
+            width: clamp(130px, 40vw, 200px); height: auto; object-fit: contain;
+            margin-bottom: 15px; animation: kedipAnim 2s infinite ease-in-out;
         }
 
         .landing-card-container {
@@ -98,11 +80,10 @@
         }
 
         .landing-card {
-            background: #f8f9fa; color: var(--dark);
-            border: 1px solid var(--border);
+            background: #f8f9fa; color: var(--dark); border: 1px solid var(--border);
             padding: 25px 20px; border-radius: 12px; width: 260px; max-width: 100%;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            cursor: pointer; transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); cursor: pointer; 
+            transition: transform 0.3s, box-shadow 0.3s;
             display: flex; flex-direction: column; align-items: center; gap: 12px;
         }
 
@@ -124,7 +105,6 @@
 
         .page-section.active { display: flex; }
 
-        /* TOMBOL KEMBALI KE MENU */
         .btn-back-menu {
             position: absolute; top: 20px; left: 20px; z-index: 1000;
             background: white; color: var(--dark); border: 2px solid var(--border);
@@ -132,19 +112,19 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); font-size: 13px;
         }
 
-        /* STYLE HALAMAN PENGECEKAN KOORDINAT & DAFTAR POKTAN */
-        .check-map-container, .list-map-container { position: relative; width: 100%; height: 100%; }
-        #mapCheck, #mapList { width: 100%; height: 100%; }
+        /* HALAMAN CEK KOORDINAT */
+        .check-map-container { position: relative; width: 100%; height: 100%; }
+        #mapCheck { width: 100%; height: 100%; }
 
-        .check-floating-panel, .list-floating-panel {
+        .check-floating-panel {
             position: absolute; top: 75px; left: 20px; z-index: 1000;
             background: white; padding: 15px; border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 320px; max-width: calc(100% - 40px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 340px; max-width: calc(100% - 40px);
             display: flex; flex-direction: column; gap: 10px; max-height: 80vh; overflow-y: auto;
         }
 
         .check-floating-panel input {
-            padding: 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
+            padding: 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%;
         }
 
         .btn-action-check {
@@ -157,13 +137,58 @@
             padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;
         }
 
-        .poktan-item-card {
-            background: #fdfdfd; border: 1px solid var(--border); padding: 10px; border-radius: 6px;
-            cursor: pointer; transition: background 0.2s; display: flex; flex-direction: column; gap: 3px;
-        }
-        .poktan-item-card:hover { background: #f1f2f6; border-color: var(--primary); }
+        /* HALAMAN 2: DAFTAR POKTAN & FOLDER BREAKDOWN */
+        .list-map-container { position: relative; width: 100%; height: 100%; }
+        #mapList { width: 100%; height: 100%; }
 
-        /* STYLE HALAMAN PENGAJUAN FORM */
+        .list-floating-panel {
+            position: absolute; top: 75px; left: 20px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 380px; max-width: calc(100% - 40px);
+            display: flex; flex-direction: column; gap: 10px; max-height: 82vh; overflow-y: auto;
+        }
+
+        .list-floating-panel input, .list-floating-panel select {
+            padding: 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%;
+        }
+
+        .btn-all-pins {
+            background-color: var(--success); color: white; border: none;
+            padding: 8px 12px; border-radius: 6px; font-size: 12.5px; font-weight: bold; cursor: pointer;
+            text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* AKORDEON FOLDER KECAMATAN & DESA */
+        .folder-kecamatan { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; overflow: hidden; background: #fff; }
+        .folder-kecamatan-header { background: #f1f2f6; padding: 10px 12px; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--primary); }
+        .folder-kecamatan-header:hover { background: #e4e7eb; }
+        .folder-kecamatan-body { display: none; padding: 6px; background: #fafafa; }
+
+        .folder-desa { border: 1px solid #e1e2e6; border-radius: 5px; margin-bottom: 5px; overflow: hidden; background: #fff; }
+        .folder-desa-header { background: #edf2f7; padding: 8px 10px; font-weight: 600; font-size: 12.5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--dark); }
+        .folder-desa-header:hover { background: #e2e8f0; }
+        .folder-desa-body { display: none; padding: 5px; display: flex; flex-direction: column; gap: 5px; }
+
+        .poktan-item-row {
+            background: #ffffff; border: 1px solid var(--border); padding: 8px 10px; border-radius: 5px;
+            cursor: pointer; transition: background 0.2s; display: flex; flex-direction: column; gap: 2px;
+        }
+        .poktan-item-row:hover { background: #f0f4f8; border-color: var(--primary); }
+
+        /* TOMBOL DRIVE & SPREADSHEET DI DALAM PANEL */
+        .admin-box-menu {
+            border-top: 2px dashed var(--border); margin-top: 5px; padding-top: 10px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .btn-sheet-link, .btn-drive-link {
+            background: #2c3e50; color: white; border: none; padding: 9px 12px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; text-align: center;
+            text-decoration: none; display: block;
+        }
+        .btn-sheet-link:hover { background: #1a252f; }
+        .btn-drive-link:hover { background: #1a252f; }
+
+        /* HALAMAN FORMULIR */
         .app-wrapper-form { display: flex; flex-direction: row; height: 100vh; width: 100vw; overflow: hidden; }
         .sidebar-form {
             width: 450px; min-width: 320px; background-color: #ffffff;
@@ -219,7 +244,7 @@
     </div>
 </div>
 
-<!-- LANDING PAGE (HALAMAN UTAMA - BACKGROUND PUTIH) -->
+<!-- LANDING PAGE (BERSIH, TANPA TOMBOL ADMIN DI LUAR) -->
 <div id="landing-page">
     <img src="Logo Home.png" alt="Logo Home" class="landing-logo-animated" onerror="this.style.display='none'">
     <h1 style="font-size: clamp(20px, 4.5vw, 32px); margin-bottom: 5px; color: var(--primary);">SISTEM INFORMASI GEOGRAFIS JUT & HORTI</h1>
@@ -234,7 +259,7 @@
         <div class="landing-card" onclick="bukaHalaman('list-page')">
             <span>📋</span>
             <h3>Daftar Pengajuan Poktan</h3>
-            <p>Lihat daftar kelompok tani terdaftar, peta sebaran pin, & analisis LP2B per titik.</p>
+            <p>Lihat daftar kelompok tani terdaftar, folder breakdown wilayah, & analisis LP2B.</p>
         </div>
         <div class="landing-card" onclick="bukaHalaman('form-page')">
             <span>📝</span>
@@ -261,27 +286,39 @@
     </div>
 </div>
 
-<!-- HALAMAN BARU: DAFTAR PENGAJUAN POKTAN -->
+<!-- HALAMAN 2: DAFTAR POKTAN DENGAN FOLDER BREAKDOWN & TOMBOL ADMIN DI DALAM -->
 <div id="list-page" class="page-section">
     <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️ Menu Utama</button>
     <div class="list-map-container">
         <div class="list-floating-panel">
-            <h4 style="margin: 0 0 5px 0; color: var(--primary);">Daftar Pengajuan Poktan</h4>
-            <p style="font-size: 12px; color: #666; margin: 0 0 8px 0;">Klik salah satu kelompok tani di bawah untuk melihat lokasinya beserta poligon LP2B yang mencakup titik tersebut.</p>
-            <div id="containerDaftarPoktan" style="display: flex; flex-direction: column; gap: 8px;">
-                <i style="font-size: 12px; color: #888;">Memuat data pengajuan...</i>
+            <h4 style="margin: 0 0 4px 0; color: var(--primary);">Daftar & Folder Breakdown Poktan</h4>
+            
+            <!-- KOLOM PENCARIAN DATA DI DALAM MENU -->
+            <input type="text" id="inputPencarianPoktan" placeholder="🔍 Cari nama poktan atau ketua..." oninput="filterDataPoktanWilayah()">
+            
+            <!-- TOMBOL TAMPILKAN SEMUA PIN -->
+            <button class="btn-all-pins" onclick="tampilkanSemuaPinDiPeta()">🌐 Tampilkan Semua Pin di Peta</button>
+
+            <!-- KONTAINER FOLDER BREAKDOWN BERJENJANG -->
+            <div id="containerFolderPoktan" style="display: flex; flex-direction: column; gap: 4px; max-height: 48vh; overflow-y: auto; margin-top: 5px;">
+                <i style="font-size: 12px; color: #888;">Memuat folder data...</i>
+            </div>
+
+            <!-- TOMBOL AKSES ADMIN, SPREADSHEET & DRIVE DI DALAM MENU -->
+            <div class="admin-box-menu">
+                <button class="btn-sheet-link" onclick="aksesSpreadsheetAdmin()">📊 Buka & Download Spreadsheet Data</button>
+                <button class="btn-drive-link" onclick="aksesDriveAdmin()">📁 Buka & Download Master JUT (Google Drive)</button>
             </div>
         </div>
         <div id="mapList"></div>
     </div>
 </div>
 
-<!-- HALAMAN 2: FORMULIR PENGAJUAN JUT & HORTI -->
+<!-- HALAMAN 3: FORMULIR PENGAJUAN JUT & HORTI -->
 <div id="form-page" class="page-section">
     <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️ Menu Utama</button>
     
     <div class="app-wrapper-form" style="width: 100%; height: 100%;">
-        <!-- SISI KIRI: FORMULIR -->
         <div class="sidebar-form" style="padding-top: 50px;">
             <div style="display: flex; align-items: center; gap: 15px; border-bottom: 3px solid var(--success); padding-bottom: 15px; margin-bottom: 20px;">
                 <img src="Logo Kabupaten Landak.png" alt="Logo Kab Landak" style="width: 45px; height: 55px; object-fit: contain;" onerror="this.style.display='none'">
@@ -388,7 +425,6 @@
             </form>
         </div>
 
-        <!-- SISI KANAN: PETA FORMULIR -->
         <div class="map-container-form">
             <div id="mapForm"></div>
         </div>
@@ -409,7 +445,6 @@
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
 <script>
-    // Tutup Splash Screen setelah 1.5 detik
     window.addEventListener('load', function() {
         setTimeout(function() {
             const splash = document.getElementById("splash-screen");
@@ -420,7 +455,6 @@
         }, 1500);
     });
 
-    // Data Wilayah Kabupaten Landak
     const wilayahLandak = {
         "Air Besar": ["Bentiang", "Dango Aji", "Engkadik", "Engkangin", "Jambu Tembawang", "Merayuh", "Nyari", "Parek", "Sekendal", "Sempatung Lawek", "Semuntik", "Sepangah", "Serimbu", "Tenguwe", "Temoyok", "Tengon Pelaik"],
         "Banyuke Hulu": ["Gamang", "Kampet", "Padang Pio", "Ringo Lojok", "Semade", "Tembawang Bale", "Untang"],
@@ -438,11 +472,9 @@
     };
 
     let cachedLp2bData = null;
-    
-    // URL Web App Google Apps Script terbaru
+    let masterDataPoktan = [];
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNgfCuwucQHTTExviIrIfbRc59s-k5b57tillfR8oRl80fszgYRmfMyg5yWfvBIEq6/exec";
 
-    // Navigasi Antar Halaman
     function bukaHalaman(pageId) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
         document.getElementById('landing-page').style.display = 'none';
@@ -455,10 +487,29 @@
                 if (pageId === 'check-page' && mapCheck) mapCheck.invalidateSize();
                 if (pageId === 'list-page' && mapList) {
                     mapList.invalidateSize();
-                    muatDaftarPoktanKePeta();
+                    muatDaftarPoktanKeFolder();
                 }
                 if (pageId === 'form-page' && mapForm) mapForm.invalidateSize();
             }, 200);
+        }
+    }
+
+    // Fungsi Password Admin untuk Spreadsheet & Drive di dalam menu
+    function aksesSpreadsheetAdmin() {
+        const pwd = prompt("Masukkan Password Admin untuk Spreadsheet:");
+        if (pwd === "Admin123") {
+            window.open("https://docs.google.com/spreadsheets/", "_blank");
+        } else if (pwd !== null) {
+            alert("Password Salah!");
+        }
+    }
+
+    function aksesDriveAdmin() {
+        const pwd = prompt("Masukkan Password Admin untuk Google Drive:");
+        if (pwd === "Admin123") {
+            window.open("https://drive.google.com/", "_blank");
+        } else if (pwd !== null) {
+            alert("Password Salah!");
         }
     }
 
@@ -476,13 +527,10 @@
         }
     }
 
-    // ================= PETA HALAMAN 1: PENGECEKAN TITIK =================
+    // ================= PETA HALAMAN 1 =================
     const mapCheck = L.map('mapCheck', { zoomControl: false }).setView([0.3847, 109.9532], 11);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri'
-    }).addTo(mapCheck);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' }).addTo(mapCheck);
     L.control.zoom({ position: 'bottomright' }).addTo(mapCheck);
-
     let checkMarker = null;
     let checkLp2bLayer = new L.FeatureGroup().addTo(mapCheck);
 
@@ -490,76 +538,32 @@
         showStatusModal("Analisis Spasial...", "Memeriksa status kawasan LP2B...", true);
         const lp2b = await muatDataLP2BGlobal();
         document.getElementById('statusModal').style.display = 'none';
-
         checkLp2bLayer.clearLayers();
         const pt = turf.point([lon, lat]);
-
-        let masukLp2b = false;
-        let targetPolygonFeature = null;
-        let minDistance = Infinity;
+        let masukLp2b = false, targetPolygonFeature = null, minDistance = Infinity;
 
         if (lp2b && lp2b.features) {
             for (let f of lp2b.features) {
-                try {
-                    if (turf.booleanPointInPolygon(pt, f)) {
-                        masukLp2b = true;
-                        targetPolygonFeature = f;
-                        break;
-                    }
-                } catch (err) {}
+                try { if (turf.booleanPointInPolygon(pt, f)) { masukLp2b = true; targetPolygonFeature = f; break; } } catch (err) {}
             }
-
             if (!masukLp2b) {
                 lp2b.features.forEach(f => {
                     try {
                         const dist = turf.pointToPolygonDistance(pt, f, { units: 'kilometers' });
-                        if (dist < minDistance) {
-                            minDistance = dist;
-                            targetPolygonFeature = f;
-                        }
+                        if (dist < minDistance) { minDistance = dist; targetPolygonFeature = f; }
                     } catch (err) {}
                 });
             }
         }
 
-        // Tampilkan poligon radius 3 km
-        if (lp2b && lp2b.features) {
-            L.geoJSON(lp2b, {
-                filter: f => {
-                    try {
-                        return turf.booleanIntersects(turf.buffer(pt, 3, { units: 'kilometers' }), f);
-                    } catch(e) {
-                        return false;
-                    }
-                },
-                style: { color: "#27ae60", weight: 2, fillColor: "#27ae60", fillOpacity: 0.4 }
-            }).addTo(checkLp2bLayer);
-        }
-
         if (targetPolygonFeature) {
-            L.geoJSON(targetPolygonFeature, {
-                style: {
-                    color: masukLp2b ? "#27ae60" : "#e67e22",
-                    weight: 4,
-                    fillColor: masukLp2b ? "#27ae60" : "#e67e22",
-                    fillOpacity: 0.6
-                }
-            }).addTo(checkLp2bLayer);
+            L.geoJSON(targetPolygonFeature, { style: { color: masukLp2b ? "#27ae60" : "#e67e22", weight: 4, fillColor: masukLp2b ? "#27ae60" : "#e67e22", fillOpacity: 0.6 } }).addTo(checkLp2bLayer);
         }
 
         if (checkMarker) mapCheck.removeLayer(checkMarker);
         checkMarker = L.marker([lat, lon], { draggable: true }).addTo(mapCheck);
-        
-        let statusTeks = masukLp2b ? 
-            `<span style="color:var(--success); font-weight:bold;">✔ MASUK KAWASAN LP2B</span>` : 
-            `<span style="color:var(--danger); font-weight:bold;">❌ DI LUAR KAWASAN LP2B</span><br><small>Terdekat (±${minDistance.toFixed(2)} km)</small>`;
-
+        let statusTeks = masukLp2b ? `<span style="color:var(--success); font-weight:bold;">✔ MASUK KAWASAN LP2B</span>` : `<span style="color:var(--danger); font-weight:bold;">❌ DI LUAR LP2B</span><br><small>Terdekat (±${minDistance.toFixed(2)} km)</small>`;
         checkMarker.bindPopup(`<b>${labelInfo}</b><br>Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}<br>${statusTeks}`).openPopup();
-        checkMarker.on('dragend', function(e) {
-            const c = e.target.getLatLng();
-            prosesAnalisisCheckPoint(c.lat, c.lng, "Titik Pilihan (Digeser)");
-        });
-
         document.getElementById('infoRadiusCheck').innerHTML = `<b>Status Analisis:</b><br>${statusTeks}<br><b>Koordinat:</b> ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
         mapCheck.setView([lat, lon], 15);
     }
@@ -571,143 +575,197 @@
             const lat = parseFloat(p[0]), lon = parseFloat(p[1]);
             if (!isNaN(lat) && !isNaN(lon)) { prosesAnalisisCheckPoint(lat, lon, "Titik Koordinat Cari"); return; }
         }
-        alert("Masukkan koordinat valid format: Lat, Lon (Contoh: 0.3847, 109.9532)");
+        alert("Masukkan koordinat valid format: Lat, Lon");
     }
 
     function ambilGPSCheckPage() {
         if (!navigator.geolocation) { alert("GPS tidak didukung."); return; }
         showStatusModal("Mengakses GPS...", "Mendapatkan titik perangkat...", true);
         navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                document.getElementById('statusModal').style.display = 'none';
-                prosesAnalisisCheckPoint(pos.coords.latitude, pos.coords.longitude, "Lokasi Perangkat GPS");
-            },
-            (err) => {
-                document.getElementById('statusModal').style.display = 'none';
-                alert("Gagal ambil GPS: " + err.message);
-            },
+            (pos) => { document.getElementById('statusModal').style.display = 'none'; prosesAnalisisCheckPoint(pos.coords.latitude, pos.coords.longitude, "Lokasi Perangkat GPS"); },
+            (err) => { document.getElementById('statusModal').style.display = 'none'; alert("Gagal ambil GPS: " + err.message); },
             { enableHighAccuracy: true, timeout: 10000 }
         );
     }
 
 
-    // ================= PETA HALAMAN BARU: DAFTAR PENGAJUAN POKTAN =================
+    // ================= PETA HALAMAN 2: FOLDER BREAKDOWN & PENCARIAN =================
     const mapList = L.map('mapList', { zoomControl: false }).setView([0.3847, 109.9532], 11);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri'
-    }).addTo(mapList);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' }).addTo(mapList);
     L.control.zoom({ position: 'bottomright' }).addTo(mapList);
-
     let listMarkersGroup = new L.FeatureGroup().addTo(mapList);
-    let listLp2bLayer = new L.FeatureGroup().addTo(mapList); // Layer khusus poligon tunggal LP2B
+    let listLp2bLayer = new L.FeatureGroup().addTo(mapList);
 
-    async function muatDaftarPoktanKePeta() {
-        const container = document.getElementById('containerDaftarPoktan');
+    async function muatDaftarPoktanKeFolder() {
+        const container = document.getElementById('containerFolderPoktan');
         container.innerHTML = `<i style="font-size: 12px; color: #888;">Memuat data dari server...</i>`;
         listMarkersGroup.clearLayers();
         listLp2bLayer.clearLayers();
 
         try {
             const res = await fetch(GOOGLE_SCRIPT_URL);
-            const rows = await res.json();
-            container.innerHTML = '';
-
-            if (!Array.isArray(rows) || rows.length === 0) {
+            masterDataPoktan = await res.json();
+            if (!Array.isArray(masterDataPoktan) || masterDataPoktan.length === 0) {
                 container.innerHTML = `<i style="font-size: 12px; color: #888;">Belum ada data pengajuan poktan.</i>`;
                 return;
             }
-
-            rows.forEach((r, index) => {
-                const coord = r["Lat/Lon Awal"] || "";
-                if (coord.includes(",")) {
-                    const p = coord.split(",");
-                    const lat = parseFloat(p[0]), lon = parseFloat(p[1]);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        // 1. Buat Pin di Peta Daftar
-                        const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
-                        marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Desa: ${r["Desa"] || "-"}`);
-
-                        marker.on('click', () => {
-                            pilihDanTampilkanLp2bPoktan(lat, lon, r);
-                        });
-
-                        // 2. Buat Kartu Item di Panel Samping
-                        const card = document.createElement('div');
-                        card.className = 'poktan-item-card';
-                        card.innerHTML = `
-                            <strong style="font-size: 13px; color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
-                            <span style="font-size: 11.5px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"} | Desa: ${r["Desa"] || "-"}</span>
-                        `;
-                        card.onclick = () => {
-                            mapList.setView([lat, lon], 15);
-                            marker.openPopup();
-                            pilihDanTampilkanLp2bPoktan(lat, lon, r);
-                        };
-                        container.appendChild(card);
-                    }
-                }
-            });
+            renderFolderStruktur(masterDataPoktan);
         } catch (e) {
             container.innerHTML = `<i style="font-size: 12px; color: var(--danger);">Gagal memuat data poktan.</i>`;
         }
     }
 
-    async function pilihDanTampilkanLp2bPoktan(lat, lon, dataPoktan) {
-        showStatusModal("Memuat Analisis...", "Mengambil poligon LP2B untuk titik ini...", true);
+    function renderFolderStruktur(dataArray) {
+        const container = document.getElementById('containerFolderPoktan');
+        container.innerHTML = '';
+        listMarkersGroup.clearLayers();
+
+        if (dataArray.length === 0) {
+            container.innerHTML = `<i style="font-size: 12px; color: #888;">Data tidak ditemukan.</i>`;
+            return;
+        }
+
+        // Kelompokkan data Berdasarkan Kecamatan -> Desa
+        let grouped = {};
+        dataArray.forEach(item => {
+            const kec = item["Kecamatan"] || "Lainnya";
+            const desa = item["Desa"] || "Lainnya";
+            if (!grouped[kec]) grouped[kec] = {};
+            if (!grouped[kec][desa]) grouped[kec][desa] = [];
+            grouped[kec][desa].push(item);
+        });
+
+        Object.keys(grouped).sort().forEach(kec => {
+            const kecDiv = document.createElement('div');
+            kecDiv.className = 'folder-kecamatan';
+
+            const countKec = Object.values(grouped[kec]).reduce((a, b) => a + b.length, 0);
+            
+            const kecHeader = document.createElement('div');
+            kecHeader.className = 'folder-kecamatan-header';
+            kecHeader.innerHTML = `<span>📁 Kec. ${kec} (${countKec})</span><span>▼</span>`;
+            
+            const kecBody = document.createElement('div');
+            kecBody.className = 'folder-kecamatan-body';
+
+            kecHeader.onclick = () => {
+                kecBody.style.display = kecBody.style.display === 'block' ? 'none' : 'block';
+                kecHeader.querySelector('span:last-child').innerText = kecBody.style.display === 'block' ? '▲' : '▼';
+            };
+
+            Object.keys(grouped[kec]).sort().forEach(desa => {
+                const desaDiv = document.createElement('div');
+                desaDiv.className = 'folder-desa';
+
+                const listDesaItem = grouped[kec][desa];
+                const desaHeader = document.createElement('div');
+                desaHeader.className = 'folder-desa-header';
+                desaHeader.innerHTML = `<span>📂 Desa ${desa} (${listDesaItem.length})</span><span>▼</span>`;
+
+                const desaBody = document.createElement('div');
+                desaBody.className = 'folder-desa-body';
+
+                desaHeader.onclick = () => {
+                    desaBody.style.display = desaBody.style.display === 'flex' ? 'none' : 'flex';
+                    desaHeader.querySelector('span:last-child').innerText = desaBody.style.display === 'flex' ? '▲' : '▼';
+                };
+
+                listDesaItem.forEach(r => {
+                    const coord = r["Lat/Lon Awal"] || "";
+                    let lat = 0, lon = 0;
+                    if (coord.includes(",")) {
+                        const p = coord.split(",");
+                        lat = parseFloat(p[0]); lon = parseFloat(p[1]);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
+                            marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Kec: ${kec} | Desa: ${desa}`);
+                        }
+                    }
+
+                    const row = document.createElement('div');
+                    row.className = 'poktan-item-row';
+                    row.innerHTML = `
+                        <strong style="font-size: 12.5px; color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
+                        <span style="font-size: 11px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"}</span>
+                    `;
+                    row.onclick = () => {
+                        if (!isNaN(lat) && !isNaN(lon) && lat !== 0) {
+                            mapList.setView([lat, lon], 16);
+                            pilihDanTampilkanLp2bPoktan(lat, lon);
+                        } else {
+                            alert("Koordinat tidak valid.");
+                        }
+                    };
+                    desaBody.appendChild(row);
+                });
+
+                desaDiv.appendChild(desaHeader);
+                desaDiv.appendChild(desaBody);
+                kecBody.appendChild(desaDiv);
+            });
+
+            kecDiv.appendChild(kecHeader);
+            kecDiv.appendChild(kecBody);
+            container.appendChild(kecDiv);
+        });
+    }
+
+    // Fungsi Pencarian Data di dalam Menu
+    function filterDataPoktanWilayah() {
+        const keyword = document.getElementById('inputPencarianPoktan').value.toLowerCase();
+        const filtered = masterDataPoktan.filter(r => {
+            const namaP = (r["Nama Poktan"] || "").toLowerCase();
+            const namaK = (r["Nama Ketua"] || "").toLowerCase();
+            const kec = (r["Kecamatan"] || "").toLowerCase();
+            const desa = (r["Desa"] || "").toLowerCase();
+            return namaP.includes(keyword) || namaK.includes(keyword) || kec.includes(keyword) || desa.includes(keyword);
+        });
+        renderFolderStruktur(filtered);
+    }
+
+    // Tombol Tampilkan Semua Pin di Peta
+    function tampilkanSemuaPinDiPeta() {
+        if (listMarkersGroup.getLayers().length > 0) {
+            mapList.fitBounds(listMarkersGroup.getBounds(), { padding: [40, 40] });
+            alert("🌐 Semua pin titik poktan ditampilkan di peta!");
+        } else {
+            alert("Tidak ada pin koordinat untuk ditampilkan.");
+        }
+    }
+
+    async function pilihDanTampilkanLp2bPoktan(lat, lon) {
+        showStatusModal("Memuat Analisis...", "Mengambil poligon LP2B...", true);
         const lp2b = await muatDataLP2BGlobal();
         document.getElementById('statusModal').style.display = 'none';
 
-        // Hapus poligon sebelumnya agar ketika klik pin lain, poligon lama langsung hilang
         listLp2bLayer.clearLayers();
-
         const pt = turf.point([lon, lat]);
-        let targetPolygonFeature = null;
-        let masukLp2b = false;
+        let targetPolygonFeature = null, masukLp2b = false;
 
         if (lp2b && lp2b.features) {
-            // 1. Cari poligon yang tepat berada di dalam area titik tersebut
             for (let f of lp2b.features) {
-                try {
-                    if (turf.booleanPointInPolygon(pt, f)) {
-                        masukLp2b = true;
-                        targetPolygonFeature = f;
-                        break;
-                    }
-                } catch (err) {}
+                try { if (turf.booleanPointInPolygon(pt, f)) { masukLp2b = true; targetPolygonFeature = f; break; } } catch (err) {}
             }
-
-            // 2. Jika titik berada di luar poligon persis, ambil poligon terdekatnya
             if (!targetPolygonFeature) {
                 let minDistance = Infinity;
                 lp2b.features.forEach(f => {
                     try {
                         const dist = turf.pointToPolygonDistance(pt, f, { units: 'kilometers' });
-                        if (dist < minDistance) {
-                            minDistance = dist;
-                            targetPolygonFeature = f;
-                        }
+                        if (dist < minDistance) { minDistance = dist; targetPolygonFeature = f; }
                     } catch (err) {}
                 });
             }
         }
 
-        // TAMPILKAN HANYA 1 POLIGON YANG KENA PIN TERSEBUT (Tanpa poligon sekitar)
         if (targetPolygonFeature) {
             L.geoJSON(targetPolygonFeature, {
-                style: {
-                    color: masukLp2b ? "#27ae60" : "#e67e22",
-                    weight: 4,
-                    fillColor: masukLp2b ? "#27ae60" : "#e67e22",
-                    fillOpacity: 0.6
-                }
+                style: { color: masukLp2b ? "#27ae60" : "#e67e22", weight: 4, fillColor: masukLp2b ? "#27ae60" : "#e67e22", fillOpacity: 0.6 }
             }).addTo(listLp2bLayer);
         }
-
-        mapList.setView([lat, lon], 16);
     }
 
 
-    // ================= PETA & FORM HALAMAN: PENGAJUAN =================
+    // ================= FORMULIR PENGAJUAN =================
     document.addEventListener('DOMContentLoaded', () => {
         const selectKecamatan = document.getElementById('kecamatan');
         Object.keys(wilayahLandak).sort().forEach(kec => {
@@ -734,9 +792,7 @@
     mapForm.createPane('lp2bPane'); mapForm.getPane('lp2bPane').style.zIndex = 400;
     mapForm.createPane('rutePane'); mapForm.getPane('rutePane').style.zIndex = 600;
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri'
-    }).addTo(mapForm);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' }).addTo(mapForm);
     L.control.zoom({ position: 'bottomright' }).addTo(mapForm);
 
     let layerRute = new L.FeatureGroup({ pane: 'rutePane' }).addTo(mapForm);
@@ -767,10 +823,7 @@
                 });
                 alert("✅ GPS berhasil diambil! Pin merah bisa digeser.");
             },
-            (err) => {
-                document.getElementById('statusModal').style.display = 'none';
-                alert("Gagal ambil GPS: " + err.message);
-            },
+            (err) => { document.getElementById('statusModal').style.display = 'none'; alert("Gagal ambil GPS: " + err.message); },
             { enableHighAccuracy: true, timeout: 10000 }
         );
     }
