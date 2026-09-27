@@ -490,12 +490,12 @@
             }
         }
 
-        // Tampilkan poligon LP2B di sekitar titik secara otomatis
+        // HANYA MENAMPILKAN POLIGON DALAM RADIUS 3 KM AGAR JAUH LEBIH RINGAN
         if (lp2b && lp2b.features) {
             L.geoJSON(lp2b, {
                 filter: f => {
                     try {
-                        return turf.booleanIntersects(turf.buffer(pt, 5, { units: 'kilometers' }), f);
+                        return turf.booleanIntersects(turf.buffer(pt, 3, { units: 'kilometers' }), f);
                     } catch(e) {
                         return false;
                     }
