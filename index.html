@@ -139,7 +139,7 @@
         .check-floating-panel, .list-floating-panel {
             position: absolute; top: 75px; left: 20px; z-index: 1000;
             background: white; padding: 15px; border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 320px; max-width: calc(100% - 40px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 340px; max-width: calc(100% - 40px);
             display: flex; flex-direction: column; gap: 10px; max-height: 80vh; overflow-y: auto;
         }
 
@@ -157,11 +157,26 @@
             padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;
         }
 
-        .poktan-item-card {
-            background: #fdfdfd; border: 1px solid var(--border); padding: 10px; border-radius: 6px;
-            cursor: pointer; transition: background 0.2s; display: flex; flex-direction: column; gap: 3px;
+        /* KOMPONEN BREAKDOWN WILAYAH */
+        .tree-kecamatan-header, .tree-desa-header {
+            background: #f1f2f6; border: 1px solid var(--border); padding: 8px 10px;
+            border-radius: 6px; font-size: 13px; font-weight: bold; color: var(--primary);
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
         }
-        .poktan-item-card:hover { background: #f1f2f6; border-color: var(--primary); }
+        .tree-kecamatan-header:hover, .tree-desa-header:hover { background: #e4e7eb; }
+        .tree-desa-container { margin-left: 12px; margin-top: 5px; display: flex; flex-direction: column; gap: 6px; border-left: 2px solid var(--border); padding-left: 8px; }
+        .tree-poktan-container { margin-left: 12px; margin-top: 5px; display: flex; flex-direction: column; gap: 5px; }
+        
+        .poktan-tree-item {
+            background: #ffffff; border: 1px solid var(--border); padding: 7px 10px; border-radius: 5px;
+            cursor: pointer; font-size: 12px; transition: background 0.2s; display: flex; flex-direction: column; gap: 2px;
+        }
+        .poktan-tree-item:hover { background: #f8f9fa; border-color: var(--primary); }
+
+        .btn-all-data {
+            background-color: var(--success); color: white; border: none; padding: 10px;
+            border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 5px;
+        }
 
         /* STYLE HALAMAN PENGAJUAN FORM */
         .app-wrapper-form { display: flex; flex-direction: row; height: 100vh; width: 100vw; overflow: hidden; }
@@ -219,7 +234,7 @@
     </div>
 </div>
 
-<!-- LANDING PAGE (HALAMAN UTAMA - BACKGROUND PUTIH) -->
+<!-- LANDING PAGE -->
 <div id="landing-page">
     <img src="Logo Home.png" alt="Logo Home" class="landing-logo-animated" onerror="this.style.display='none'">
     <h1 style="font-size: clamp(20px, 4.5vw, 32px); margin-bottom: 5px; color: var(--primary);">SISTEM INFORMASI GEOGRAFIS JUT & HORTI</h1>
@@ -234,7 +249,7 @@
         <div class="landing-card" onclick="bukaHalaman('list-page')">
             <span>📋</span>
             <h3>Daftar Pengajuan Poktan</h3>
-            <p>Lihat daftar kelompok tani terdaftar, peta sebaran pin, & analisis LP2B per titik.</p>
+            <p>Lihat daftar kelompok tani terstruktur per wilayah, peta sebaran pin, & analisis LP2B.</p>
         </div>
         <div class="landing-card" onclick="bukaHalaman('form-page')">
             <span>📝</span>
@@ -261,14 +276,15 @@
     </div>
 </div>
 
-<!-- HALAMAN BARU: DAFTAR PENGAJUAN POKTAN -->
+<!-- HALAMAN: DAFTAR PENGAJUAN POKTAN (BREAKDOWN WILAYAH) -->
 <div id="list-page" class="page-section">
     <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️ Menu Utama</button>
     <div class="list-map-container">
         <div class="list-floating-panel">
-            <h4 style="margin: 0 0 5px 0; color: var(--primary);">Daftar Pengajuan Poktan</h4>
-            <p style="font-size: 12px; color: #666; margin: 0 0 8px 0;">Klik salah satu kelompok tani di bawah untuk melihat lokasinya beserta poligon LP2B yang mencakup titik tersebut.</p>
-            <div id="containerDaftarPoktan" style="display: flex; flex-direction: column; gap: 8px;">
+            <h4 style="margin: 0 0 3px 0; color: var(--primary);">Daftar Pengajuan Poktan</h4>
+            <p style="font-size: 11.5px; color: #666; margin: 0 0 8px 0;">Pilih Kecamatan ➔ Desa ➔ Poktan, atau tampilkan semua data sekaligus.</p>
+            <button class="btn-all-data" onclick="tampilkanSemuaDataPoktan()">🌐 Lihat Semua Data</button>
+            <div id="containerTreePoktan" style="display: flex; flex-direction: column; gap: 6px; margin-top: 5px;">
                 <i style="font-size: 12px; color: #888;">Memuat data pengajuan...</i>
             </div>
         </div>
@@ -281,7 +297,6 @@
     <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️ Menu Utama</button>
     
     <div class="app-wrapper-form" style="width: 100%; height: 100%;">
-        <!-- SISI KIRI: FORMULIR -->
         <div class="sidebar-form" style="padding-top: 50px;">
             <div style="display: flex; align-items: center; gap: 15px; border-bottom: 3px solid var(--success); padding-bottom: 15px; margin-bottom: 20px;">
                 <img src="Logo Kabupaten Landak.png" alt="Logo Kab Landak" style="width: 45px; height: 55px; object-fit: contain;" onerror="this.style.display='none'">
@@ -388,7 +403,6 @@
             </form>
         </div>
 
-        <!-- SISI KANAN: PETA FORMULIR -->
         <div class="map-container-form">
             <div id="mapForm"></div>
         </div>
@@ -409,7 +423,6 @@
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
 <script>
-    // Tutup Splash Screen setelah 1.5 detik
     window.addEventListener('load', function() {
         setTimeout(function() {
             const splash = document.getElementById("splash-screen");
@@ -420,7 +433,6 @@
         }, 1500);
     });
 
-    // Data Wilayah Kabupaten Landak
     const wilayahLandak = {
         "Air Besar": ["Bentiang", "Dango Aji", "Engkadik", "Engkangin", "Jambu Tembawang", "Merayuh", "Nyari", "Parek", "Sekendal", "Sempatung Lawek", "Semuntik", "Sepangah", "Serimbu", "Tenguwe", "Temoyok", "Tengon Pelaik"],
         "Banyuke Hulu": ["Gamang", "Kampet", "Padang Pio", "Ringo Lojok", "Semade", "Tembawang Bale", "Untang"],
@@ -438,9 +450,9 @@
     };
 
     let cachedLp2bData = null;
+    let globalPoktanRows = []; // Menyimpan data mentah poktan untuk fitur tree & lihat semua
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxH6xzzZO4uYlwEvRibwb1BTZvVs4tIuEXuHK8brSzJYJKD-IY6zs7yTmqHxg4lBAhP/exec";
 
-    // Navigasi Antar Halaman
     function bukaHalaman(pageId) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
         document.getElementById('landing-page').style.display = 'none';
@@ -520,7 +532,6 @@
             }
         }
 
-        // Tampilkan poligon radius 3 km
         if (lp2b && lp2b.features) {
             L.geoJSON(lp2b, {
                 filter: f => {
@@ -589,7 +600,7 @@
     }
 
 
-    // ================= PETA HALAMAN BARU: DAFTAR PENGAJUAN POKTAN =================
+    // ================= PETA HALAMAN: DAFTAR PENGAJUAN POKTAN (BREAKDOWN & SEMUA DATA) =================
     const mapList = L.map('mapList', { zoomControl: false }).setView([0.3847, 109.9532], 11);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles © Esri'
@@ -597,56 +608,130 @@
     L.control.zoom({ position: 'bottomright' }).addTo(mapList);
 
     let listMarkersGroup = new L.FeatureGroup().addTo(mapList);
-    let listLp2bLayer = new L.FeatureGroup().addTo(mapList); // Layer khusus poligon tunggal LP2B
+    let listLp2bLayer = new L.FeatureGroup().addTo(mapList);
 
     async function muatDaftarPoktanKePeta() {
-        const container = document.getElementById('containerDaftarPoktan');
+        const container = document.getElementById('containerTreePoktan');
         container.innerHTML = `<i style="font-size: 12px; color: #888;">Memuat data dari server...</i>`;
         listMarkersGroup.clearLayers();
         listLp2bLayer.clearLayers();
 
         try {
             const res = await fetch(GOOGLE_SCRIPT_URL);
-            const rows = await res.json();
+            globalPoktanRows = await res.json();
             container.innerHTML = '';
 
-            if (!Array.isArray(rows) || rows.length === 0) {
+            if (!Array.isArray(globalPoktanRows) || globalPoktanRows.length === 0) {
                 container.innerHTML = `<i style="font-size: 12px; color: #888;">Belum ada data pengajuan poktan.</i>`;
                 return;
             }
 
-            rows.forEach((r, index) => {
-                const coord = r["Lat/Lon Awal"] || "";
-                if (coord.includes(",")) {
-                    const p = coord.split(",");
-                    const lat = parseFloat(p[0]), lon = parseFloat(p[1]);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        // 1. Buat Pin di Peta Daftar
-                        const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
-                        marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Desa: ${r["Desa"] || "-"}`);
-
-                        marker.on('click', () => {
-                            pilihDanTampilkanLp2bPoktan(lat, lon, r);
-                        });
-
-                        // 2. Buat Kartu Item di Panel Samping
-                        const card = document.createElement('div');
-                        card.className = 'poktan-item-card';
-                        card.innerHTML = `
-                            <strong style="font-size: 13px; color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
-                            <span style="font-size: 11.5px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"} | Desa: ${r["Desa"] || "-"}</span>
-                        `;
-                        card.onclick = () => {
-                            mapList.setView([lat, lon], 15);
-                            marker.openPopup();
-                            pilihDanTampilkanLp2bPoktan(lat, lon, r);
-                        };
-                        container.appendChild(card);
-                    }
-                }
+            // Grouping data berdasarkan Kecamatan lalu Desa
+            let treeData = {};
+            globalPoktanRows.forEach(r => {
+                const kec = r["Kecamatan"] || "Lainnya";
+                const desa = r["Desa"] || "Lainnya";
+                if (!treeData[kec]) treeData[kec] = {};
+                if (!treeData[kec][desa]) treeData[kec][desa] = [];
+                treeData[kec][desa].push(r);
             });
+
+            // Render Tree Menu di Sidebar
+            Object.keys(treeData).sort().forEach(kec => {
+                const kecId = "kec_" + kec.replace(/[^a-zA-Z0-9]/g, '_');
+                
+                const kecDiv = document.createElement('div');
+                kecDiv.innerHTML = `
+                    <div class="tree-kecamatan-header" onclick="toggleTreeSection('${kecId}')">
+                        <span>📁 ${kec}</span>
+                        <span style="font-size: 11px;">▼</span>
+                    </div>
+                    <div id="${kecId}" class="tree-desa-container" style="display: none;"></div>
+                `;
+                container.appendChild(kecDiv);
+
+                const desaContainer = kecDiv.querySelector(`#${kecId}`);
+                Object.keys(treeData[kec]).sort().forEach(desa => {
+                    const desaId = kecId + "_desa_" + desa.replace(/[^a-zA-Z0-9]/g, '_');
+                    
+                    const desaDiv = document.createElement('div');
+                    desaDiv.innerHTML = `
+                        <div class="tree-desa-header" onclick="toggleTreeSection('${desaId}')">
+                            <span>📂 ${desa} (${treeData[kec][desa].length})</span>
+                            <span style="font-size: 10px;">▼</span>
+                        </div>
+                        <div id="${desaId}" class="tree-poktan-container" style="display: none;"></div>
+                    `;
+                    desaContainer.appendChild(desaDiv);
+
+                    const poktanContainer = desaDiv.querySelector(`#${desaId}`);
+                    treeData[kec][desa].forEach(r => {
+                        const coord = r["Lat/Lon Awal"] || "";
+                        if (coord.includes(",")) {
+                            const p = coord.split(",");
+                            const lat = parseFloat(p[0]), lon = parseFloat(p[1]);
+                            if (!isNaN(lat) && !isNaN(lon)) {
+                                const poktanCard = document.createElement('div');
+                                poktanCard.className = 'poktan-tree-item';
+                                poktanCard.innerHTML = `
+                                    <strong style="color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
+                                    <span>Ketua: ${r["Nama Ketua"] || "-"}</span>
+                                `;
+                                poktanCard.onclick = (e) => {
+                                    e.stopPropagation();
+                                    listMarkersGroup.clearLayers();
+                                    const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
+                                    marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Desa: ${r["Desa"] || "-"}`).openPopup();
+                                    mapList.setView([lat, lon], 16);
+                                    pilihDanTampilkanLp2bPoktan(lat, lon, r);
+                                };
+                                poktanContainer.appendChild(poktanCard);
+                            }
+                        }
+                    });
+                });
+            });
+
         } catch (e) {
             container.innerHTML = `<i style="font-size: 12px; color: var(--danger);">Gagal memuat data poktan.</i>`;
+        }
+    }
+
+    function toggleTreeSection(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+        }
+    }
+
+    function tampilkanSemuaDataPoktan() {
+        if (!Array.isArray(globalPoktanRows) || globalPoktanRows.length === 0) {
+            alert("Belum ada data untuk ditampilkan.");
+            return;
+        }
+
+        listMarkersGroup.clearLayers();
+        listLp2bLayer.clearLayers();
+        let bounds = [];
+
+        globalPoktanRows.forEach(r => {
+            const coord = r["Lat/Lon Awal"] || "";
+            if (coord.includes(",")) {
+                const p = coord.split(",");
+                const lat = parseFloat(p[0]), lon = parseFloat(p[1]);
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
+                    marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Desa: ${r["Desa"] || "-"}`);
+                    marker.on('click', () => {
+                        pilihDanTampilkanLp2bPoktan(lat, lon, r);
+                    });
+                    bounds.push([lat, lon]);
+                }
+            }
+        });
+
+        if (bounds.length > 0) {
+            mapList.fitBounds(bounds, { padding: [50, 50] });
         }
     }
 
@@ -655,7 +740,6 @@
         const lp2b = await muatDataLP2BGlobal();
         document.getElementById('statusModal').style.display = 'none';
 
-        // Hapus poligon sebelumnya agar ketika klik pin lain, poligon lama langsung hilang
         listLp2bLayer.clearLayers();
 
         const pt = turf.point([lon, lat]);
@@ -663,7 +747,6 @@
         let masukLp2b = false;
 
         if (lp2b && lp2b.features) {
-            // 1. Cari poligon yang tepat berada di dalam area titik tersebut
             for (let f of lp2b.features) {
                 try {
                     if (turf.booleanPointInPolygon(pt, f)) {
@@ -674,7 +757,6 @@
                 } catch (err) {}
             }
 
-            // 2. Jika titik berada di luar poligon persis, ambil poligon terdekatnya
             if (!targetPolygonFeature) {
                 let minDistance = Infinity;
                 lp2b.features.forEach(f => {
@@ -689,7 +771,6 @@
             }
         }
 
-        // TAMPILKAN HANYA 1 POLIGON YANG KENA PIN TERSEBUT (Tanpa poligon sekitar)
         if (targetPolygonFeature) {
             L.geoJSON(targetPolygonFeature, {
                 style: {
