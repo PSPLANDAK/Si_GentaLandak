@@ -433,20 +433,27 @@
     async function muatDataLP2BGlobal() {
         if (cachedLp2bData) return cachedLp2bData;
         try {
-            const urlFile = "https://raw.githubusercontent.com/andrimegi325-cyber/web-jalan-tani/main/lp2b_indonesia.zip";
-            const res = await fetch(urlFile);
-            if (!res.ok) throw new Error("Gagal mengambil file zip dari GitHub.");
+            console.log("Sedang mengunduh file LP2B dari Google Drive...");
+            const urlFile = "https://drive.google.com/uc?export=download&id=1-TWCRfML4ML7ORoULpYXB6OY0HTWKTwH";
             
+            const res = await fetch(urlFile);
+            if (!res.ok) throw new Error("Gagal mengambil file zip dari Google Drive. Status: " + res.status);
+            
+            console.log("Download Google Drive selesai, memproses ZIP (140 MB)...");
             const blob = await res.arrayBuffer();
             const zip = await JSZip.loadAsync(blob);
+            
             const filename = Object.keys(zip.files)[0];
+            console.log("Mengekstrak file di dalam ZIP:", filename);
             const content = await zip.file(filename).async("text");
             
+            console.log("Parsing data JSON...");
             cachedLp2bData = JSON.parse(content);
+            console.log("Data LP2B berhasil dimuat!");
             return cachedLp2bData;
         } catch (e) {
-            console.error("Gagal memuat LP2B:", e);
-            alert("Gagal memuat data poligon LP2B. Pastikan repository publik dan nama file benar.");
+            console.error("Gagal total saat memuat LP2B:", e);
+            alert("Gagal memuat LP2B dari Google Drive. Pastikan link Google Drive sudah diatur 'Siapa saja yang memiliki link'.");
             return null;
         }
     }
