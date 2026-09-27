@@ -61,23 +61,22 @@
         .splash-title {
             font-size: 32px;
             font-weight: 900;
-            color: #27ae60; /* Warna disamakan dengan nuansa hijau daun pada logo */
+            color: #27ae60;
             letter-spacing: 2px;
             text-transform: uppercase;
             text-align: center;
-            animation: kedipTeks 1s infinite alternate; /* Efek kedip/berdenyut */
+            animation: kedipTeks 1s infinite alternate;
         }
 
-        /* Animasi kedip untuk teks */
         @keyframes kedipTeks {
             0% { opacity: 0.3; transform: scale(0.98); }
             100% { opacity: 1; transform: scale(1.02); }
         }
 
         #splash-screen img {
-            width: 85%;          /* Fleksibel mengikuti lebar layar HP */
-            max-width: 350px;    /* Batas maksimal di laptop/PC */
-            height: auto;        /* Menjaga proporsi gambar agar tidak terpotong */
+            width: 85%;
+            max-width: 350px;
+            height: auto;
             object-fit: contain;
             animation: pulseLogo 1s infinite alternate;
         }
@@ -169,26 +168,26 @@
             gap: 6px;
         }
 
+        /* TOMBOL KOTAK KECIL SEPERTI TOMBOL ZOOM */
         .widget-btn {
             background: rgba(255, 255, 255, 0.95);
-            padding: 8px 12px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 34px;
+            height: 34px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 12.5px;
-            font-weight: bold;
+            justify-content: center;
+            font-size: 16px;
             text-decoration: none;
-            color: var(--dark);
-            border: 1px solid var(--border);
+            border: 2px solid rgba(0,0,0,0.2);
             transition: all 0.2s;
             cursor: pointer;
         }
 
         .widget-btn:hover {
-            background: #f1f2f6;
-            color: var(--primary);
+            background: #f4f4f4;
+            border-color: var(--primary);
         }
 
         .status-modal {
@@ -592,14 +591,14 @@
 
         <!-- WIDGET FLOATING DI ATAS TOMBOL ZOOM -->
         <div class="map-floating-widgets">
-            <button class="widget-btn" onclick="bukaModalPassword('spreadsheet', 'https://docs.google.com/spreadsheets/d/1ZMOZnXIG-tBZM0iVBNl2_IlZQtNmhh5LnLtnF3ASVGA/edit?gid=0#gid=0')">
-                📊 Spreadsheet
+            <button class="widget-btn" title="Spreadsheet" onclick="bukaModalPassword('spreadsheet', 'https://docs.google.com/spreadsheets/d/1ZMOZnXIG-tBZM0iVBNl2_IlZQtNmhh5LnLtnF3ASVGA/edit?gid=0#gid=0')">
+                📊
             </button>
-            <button class="widget-btn" onclick="bukaModalPassword('drive', 'https://drive.google.com/drive/folders/1tKKs5Vm4qxybAvv_T0XuHnsAi5QGwQK7')">
-                📁 Google Drive
+            <button class="widget-btn" title="Google Drive" onclick="bukaModalPassword('drive', 'https://drive.google.com/drive/folders/1tKKs5Vm4qxybAvv_T0XuHnsAi5QGwQK7')">
+                📁
             </button>
-            <a href="https://wa.me/6282254683173?text=Halo%20Admin,%20saya%20ingin%20bertanya%20terkait%20pengajuan%20JUT%20Kab.%20Landak" target="_blank" class="widget-btn" style="color: #27ae60;">
-                📞 Call Center WA
+            <a href="https://wa.me/6282254683173?text=Halo%20Admin,%20saya%20ingin%20bertanya%20terkait%20pengajuan%20JUT%20Kab.%20Landak" target="_blank" class="widget-btn" title="Call Center WhatsApp">
+                📞
             </a>
         </div>
 
