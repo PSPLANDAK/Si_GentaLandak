@@ -38,7 +38,7 @@
             overflow: hidden;
         }
 
-        /* STYLE SPLASH SCREEN DENGAN EFEK KEDIP / BERDENYUT & AMAN DI HP */
+        /* STYLE SPLASH SCREEN */
         #splash-screen {
             position: fixed;
             top: 0;
@@ -419,7 +419,7 @@
 </head>
 <body>
 
-<!-- SPLASH SCREEN DENGAN EFEK KEDIP -->
+<!-- SPLASH SCREEN -->
 <div id="splash-screen">
     <div class="splash-content-animated">
         <div class="splash-title">SELAMAT DATANG</div>
@@ -576,7 +576,6 @@
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
 <script>
-    // FUNGSI PAKSA TUTUP SPLASH SCREEN SETELAH 1.5 DETIK
     window.addEventListener('load', function() {
         setTimeout(function() {
             const splash = document.getElementById("splash-screen");
@@ -858,7 +857,16 @@
             const result = await res.json();
             document.getElementById('statusModal').style.display = 'none';
             if (result.status === "success") {
-                alert("🎉 Berhasil dikirim!");
+                alert("🎉 Selamat Data Anda Sudah Terinput!");
+                
+                // Reset form otomatis setelah sukses terkirim
+                document.getElementById('mainForm').reset();
+                resetRutePeta();
+                photosSawah = [];
+                photosJalan = [];
+                document.getElementById('previewSawahGrid').innerHTML = '';
+                document.getElementById('previewJalanGrid').innerHTML = '';
+                
                 document.getElementById('btnPrint').style.display = 'block';
                 muatDataDariSpreadsheet();
             } else {
@@ -885,7 +893,6 @@
         w.document.close();
     }
 
-    // FUNGSI KOMPRESI FOTO OTOMATIS SEBELUM MASUK KE ARRAY
     function handleFotoUpload(input, jenis) {
         const files = input.files;
         const arr = jenis === 'sawah' ? photosSawah : photosJalan;
@@ -900,7 +907,7 @@
                 img.src = e.target.result;
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1000; // Batasi lebar maksimum agar ringan
+                    const MAX_WIDTH = 1000;
                     const MAX_HEIGHT = 1000;
                     let width = img.width;
                     let height = img.height;
@@ -922,7 +929,6 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Kompres kualitas menjadi 0.7 (70%) format JPEG agar ukuran file kecil
                     const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
                     arr.push({ name: file.name, data: compressedDataUrl });
