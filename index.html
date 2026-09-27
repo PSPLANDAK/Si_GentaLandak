@@ -281,7 +281,7 @@
     </div>
 </div>
 
-<!-- HALAMAN: DAFTAR PENGAJUAN POKTAN (BREAKDOWN, PENCARIAN & DOWNLOAD) -->
+<!-- HALAMAN: DAFTAR PENGAJUAN POKTAN (BREAKDOWN, PENCARIAN & TOMBOL LINK) -->
 <div id="list-page" class="page-section">
     <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️ Menu Utama</button>
     <div class="list-map-container">
@@ -294,10 +294,14 @@
 
             <div style="display: flex; gap: 5px; margin-top: 8px;">
                 <button class="btn-all-data" onclick="tampilkanSemuaDataPoktan()" style="flex: 1;">🌐 Semua Pin</button>
-                <button class="btn-admin-panel" onclick="verifikasiAdminDownload()" style="flex: 1; margin-top:0;">📥 Unduh Data</button>
             </div>
 
-            <div id="containerTreePoktan" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 45vh; overflow-y: auto;">
+            <div style="display: flex; gap: 5px; margin-top: 5px;">
+                <button class="btn-admin-panel" onclick="verifikasiAdminBukaSpreadsheet()" style="flex: 1; margin-top:0;">📊 Buka Spreadsheet</button>
+                <button class="btn-admin-panel" onclick="verifikasiAdminBukaDrive()" style="flex: 1; margin-top:0; background-color: #d35400;">📂 Buka Google Drive</button>
+            </div>
+
+            <div id="containerTreePoktan" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 40vh; overflow-y: auto;">
                 <i style="font-size: 12px; color: #888;">Memuat data pengajuan...</i>
             </div>
         </div>
@@ -466,8 +470,9 @@
     let globalPoktanRows = []; 
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxH6xzzZO4uYlwEvRibwb1BTZvVs4tIuEXuHK8brSzJYJKD-IY6zs7yTmqHxg4lBAhP/exec";
     
-    // URL Google Drive untuk folder foto dokumentasi (Silakan ganti link di bawah jika perlu)
-    const GOOGLE_DRIVE_FOTO_URL = "https://drive.google.com/drive/folders/contoh_folder_id";
+    // URL Link Google Spreadsheet & Google Drive Anda
+    const GOOGLE_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1ZMOZnXIG-tBZM0iVBNl2_IlZQtNmhh5LnLtnF3ASVGA/edit?usp=sharing";
+    const GOOGLE_DRIVE_FOTO_URL = "https://drive.google.com/drive/folders/1tKKs5Vm4qxybAvv_T0XuHnsAi5QGwQK7?usp=sharing";
 
     function bukaHalaman(pageId) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
@@ -769,43 +774,24 @@
         }
     }
 
-    function verifikasiAdminDownload() {
-        const pwd = prompt("Masukkan Password Admin untuk mengunduh data:");
-        if (pwd === null) return; // Dibatalkan
+    function verifikasiAdminBukaSpreadsheet() {
+        const pwd = prompt("Masukkan Password Admin untuk membuka Spreadsheet:");
+        if (pwd === null) return;
         if (pwd === "Admin123") {
-            // Berhasil, berikan opsi download spreadsheet atau buka folder Google Drive foto
-            const pilihan = confirm("Tekan [OK] untuk Unduh Spreadsheet Data (.xlsx / CSV via Web GIS),\nAtau tekan [Cancel] untuk Membuka Folder Google Drive Foto.");
-            if (pilihan) {
-                downloadSpreadsheetData();
-            } else {
-                window.open(GOOGLE_DRIVE_FOTO_URL, '_blank');
-            }
+            window.open(GOOGLE_SPREADSHEET_URL, '_blank');
         } else {
             alert("❌ Password salah! Akses ditolak.");
         }
     }
 
-    function downloadSpreadsheetData() {
-        if (!globalPoktanRows || globalPoktanRows.length === 0) {
-            alert("Tidak ada data untuk diunduh.");
-            return;
+    function verifikasiAdminBukaDrive() {
+        const pwd = prompt("Masukkan Password Admin untuk membuka Google Drive:");
+        if (pwd === null) return;
+        if (pwd === "Admin123") {
+            window.open(GOOGLE_DRIVE_FOTO_URL, '_blank');
+        } else {
+            alert("❌ Password salah! Akses ditolak.");
         }
-        let csvContent = "data:text/csv;charset=utf-8,";
-        const keys = Object.keys(globalPoktanRows[0]);
-        csvContent += keys.join(",") + "\r\n";
-
-        globalPoktanRows.forEach(row => {
-            let line = keys.map(k => `"${(row[k] || "").toString().replace(/"/g, '""')}"`).join(",");
-            csvContent += line + "\r\n";
-        });
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "Data_Pengajuan_Poktan_Landak.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     }
 
     async function pilihDanTampilkanLp2bPoktan(lat, lon, dataPoktan) {
