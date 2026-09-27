@@ -467,7 +467,6 @@
         let minDistance = Infinity;
 
         if (lp2b && lp2b.features) {
-            // 1. Cek apakah titik berada di dalam salah satu poligon LP2B
             for (let f of lp2b.features) {
                 try {
                     if (turf.booleanPointInPolygon(pt, f)) {
@@ -478,7 +477,6 @@
                 } catch (err) {}
             }
 
-            // 2. Jika tidak di dalam, cari poligon LP2B terdekat agar tidak berat
             if (!masukLp2b) {
                 lp2b.features.forEach(f => {
                     try {
@@ -492,14 +490,32 @@
             }
         }
 
-        // Tampilkan Poligon LP2B yang cocok (yang sedang dimasuki atau terdekat)
+        // Tampilkan poligon LP2B di sekitar titik secara otomatis
+        if (lp2b && lp2b.features) {
+            L.geoJSON(lp2b, {
+                filter: f => {
+                    try {
+                        return turf.booleanIntersects(turf.buffer(pt, 5, { units: 'kilometers' }), f);
+                    } catch(e) {
+                        return false;
+                    }
+                },
+                style: {
+                    color: "#27ae60",
+                    weight: 2,
+                    fillColor: "#27ae60",
+                    fillOpacity: 0.4
+                }
+            }).addTo(checkLp2bLayer);
+        }
+
         if (targetPolygonFeature) {
             L.geoJSON(targetPolygonFeature, {
                 style: {
                     color: masukLp2b ? "#27ae60" : "#e67e22",
-                    weight: 3,
+                    weight: 4,
                     fillColor: masukLp2b ? "#27ae60" : "#e67e22",
-                    fillOpacity: 0.4
+                    fillOpacity: 0.6
                 }
             }).addTo(checkLp2bLayer);
         }
@@ -511,7 +527,7 @@
         if (masukLp2b) {
             statusTeks = `<span style="color:var(--success); font-weight:bold;">✔ MASUK KAWASAN LP2B</span>`;
         } else {
-            statusTeks = `<span style="color:var(--danger); font-weight:bold;">❌ DI LUAR KAWASAN LP2B</span><br><small>Menampilkan LP2B terdekat (±${minDistance.toFixed(2)} km)</small>`;
+            statusTeks = `<span style="color:var(--danger); font-weight:bold;">❌ DI LUAR KAWASAN LP2B</span><br><small>LP2B terdekat (±${minDistance.toFixed(2)} km)</small>`;
         }
 
         checkMarker.bindPopup(`<b>${labelInfo}</b><br>Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}<br>${statusTeks}<br><i>Pin bisa digeser!</i>`).openPopup();
