@@ -873,44 +873,87 @@
     }
 
     async function prosesValidasiDanAnalisis() {
-        if (document.getElementById('nik').value.length !== 16) { alert("NIK harus 16 digit!"); return; }
+        if (document.getElementById('nik').value.length !== 16) { 
+            alert("NIK harus 16 digit!"); 
+            return; 
+        }
+        
         if (!polylineRute) plotKePetaForm(false);
         const ll = polylineRute ? polylineRute.getLatLngs() : [];
-        if (ll.length < 2) { alert("Rute belum dibuat!"); return; }
+        if (ll.length < 2) { 
+            alert("Rute jalan belum dibuat di peta!"); 
+            return; 
+        }
 
         showStatusModal("Menganalisis Spasial...", "Memuat data LP2B...", true);
+        
         try {
             const lp2b = await muatDataLP2BGlobal();
+            
+            console.log("Data LP2B Terbaca:", lp2b);
+            if (lp2b && lp2b.features) {
+                console.log("Jumlah Poligon LP2B:", lp2b.features.length);
+            }
+
+            if (!lp2b || !lp2b.features) {
+                document.getElementById('statusModal').style.display = 'none';
+                alert("Gagal memuat file LP2B. Pastikan file 'lp2b_indonesia.zip' berada di folder yang sama dan dijalankan lewat Local Server (Live Server).");
+                return;
+            }
+
             const ptA = turf.point([ll[0].lng, ll[0].lat]);
             const ptB = turf.point([ll[ll.length - 1].lng, ll[ll.length - 1].lat]);
             const line = turf.lineString(ll.map(p => [p.lng, p.lat]));
-            const buf = turf.buffer(line, 5, { units: 'kilometers' });
+            
+            // Radius buffer diuji coba 50 km untuk memastikan poligon terdeteksi
+            const buf = turf.buffer(line, 50, { units: 'kilometers' });
 
-            let inA = false, inB = false;
+            let inA = false;
+            let inB = false;
+            let matchedFeatures = [];
+
+            lp2b.features.forEach(f => {
+                try {
+                    if (turf.booleanIntersects(buf, f)) {
+                        matchedFeatures.push(f);
+                    }
+                    if (turf.booleanPointInPolygon(ptA, f)) inA = true;
+                    if (turf.booleanPointInPolygon(ptB, f)) inB = true;
+                } catch (err) {}
+            });
+
+            console.log("Poligon yang cocok dengan rute (Radius 50 km):", matchedFeatures.length);
+
             layerLp2bForm.clearLayers();
-            if (lp2b) {
-                L.geoJSON(lp2b, {
+            if (matchedFeatures.length > 0) {
+                const featureCollection = turf.featureCollection(matchedFeatures);
+                L.geoJSON(featureCollection, {
                     pane: 'lp2bPane',
-                    filter: f => turf.booleanIntersects(buf, f),
-                    style: f => {
-                        try {
-                            if (turf.booleanPointInPolygon(ptA, f)) inA = true;
-                            if (turf.booleanPointInPolygon(ptB, f)) inB = true;
-                        } catch (e) {}
-                        return { color: "#27ae60", weight: 2, fillColor: "#27ae60", fillOpacity: 0.5 };
+                    style: { 
+                        color: "#27ae60", 
+                        weight: 2, 
+                        fillColor: "#27ae60", 
+                        fillOpacity: 0.5 
                     }
                 }).addTo(layerLp2bForm);
+                
+                mapForm.fitBounds(layerLp2bForm.getBounds());
             }
 
             document.getElementById('statusModal').style.display = 'none';
+
             if (inA && inB) {
-                if (confirm("✅ Titik valid dalam LP2B! Kirim data sekarang?")) kirimDataKeBackend();
+                if (confirm("✅ Titik awal dan akhir valid berada di dalam kawasan LP2B! Lanjutkan pengiriman data?")) {
+                    kirimDataKeBackend();
+                }
             } else {
-                alert("❌ Ditolak: Titik awal/akhir harus di dalam kawasan LP2B.");
+                alert("❌ Dibatalkan: Titik awal dan akhir rute jalan harus berada di dalam kawasan LP2B.");
             }
+
         } catch (e) {
             document.getElementById('statusModal').style.display = 'none';
-            alert("Gagal memproses analisis spasial.");
+            console.error("Error analisis:", e);
+            alert("Terjadi kesalahan saat memproses analisis spasial.");
         }
     }
 
