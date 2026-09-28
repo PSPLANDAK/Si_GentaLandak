@@ -293,18 +293,18 @@
         <div class="list-floating-panel">
             <h4 style="margin: 0 0 4px 0; color: var(--primary);">Daftar & Folder Breakdown Poktan</h4>
             
-            <!-- KOLOM PENCARIAN DATA DI DALAM MENU -->
+            <!-- KOLOM PENCARIAN DATA -->
             <input type="text" id="inputPencarianPoktan" placeholder="🔍 Cari nama poktan atau ketua..." oninput="filterDataPoktanWilayah()">
             
             <!-- TOMBOL TAMPILKAN SEMUA PIN -->
             <button class="btn-all-pins" onclick="tampilkanSemuaPinDiPeta()">🌐 Tampilkan Semua Pin di Peta</button>
 
-            <!-- KONTAINER FOLDER BREAKDOWN BERJENJANG -->
+            <!-- KONTAINER FOLDER BREAKDOWN -->
             <div id="containerFolderPoktan" style="display: flex; flex-direction: column; gap: 4px; max-height: 48vh; overflow-y: auto; margin-top: 5px;">
                 <i style="font-size: 12px; color: #888;">Memuat folder data...</i>
             </div>
 
-            <!-- TOMBOL AKSES ADMIN, SPREADSHEET & DRIVE KE LINK TUJUAN -->
+            <!-- TOMBOL AKSES ADMIN, SPREADSHEET & DRIVE -->
             <div class="admin-box-menu">
                 <button class="btn-sheet-link" onclick="aksesSpreadsheetAdmin()">📊 Buka & Download Spreadsheet Data</button>
                 <button class="btn-drive-link" onclick="aksesDriveAdmin()">📁 Buka & Download Master JUT (Google Drive)</button>
@@ -494,11 +494,10 @@
         }
     }
 
-    // Fungsi Password Admin untuk Spreadsheet & Drive Sesuai Link Tujuan
     function aksesSpreadsheetAdmin() {
         const pwd = prompt("Masukkan Password Admin untuk Spreadsheet:");
         if (pwd === "Admin123") {
-            window.open("https://docs.google.com/spreadsheets/d/1ZMOZnXIG-tBZM0iVBNl2_IlZQtNmhh5LnLtnF3ASVGA/edit?usp=sharing", "_blank");
+            window.open("https://docs.google.com/spreadsheets/", "_blank");
         } else if (pwd !== null) {
             alert("Password Salah!");
         }
@@ -507,7 +506,7 @@
     function aksesDriveAdmin() {
         const pwd = prompt("Masukkan Password Admin untuk Google Drive:");
         if (pwd === "Admin123") {
-            window.open("https://drive.google.com/drive/folders/1tKKs5Vm4qxybAvv_T0XuHnsAi5QGwQK7?usp=drive_link", "_blank");
+            window.open("https://drive.google.com/", "_blank");
         } else if (pwd !== null) {
             alert("Password Salah!");
         }
@@ -588,8 +587,7 @@
         );
     }
 
-
-    // ================= PETA HALAMAN 2: FOLDER BREAKDOWN & POLIGON HANYA PADA TITIK YANG DIKLIK =================
+    // ================= PETA HALAMAN 2: FOLDER BREAKDOWN & PENCARIAN =================
     const mapList = L.map('mapList', { zoomControl: false }).setView([0.3847, 109.9532], 11);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' }).addTo(mapList);
     L.control.zoom({ position: 'bottomright' }).addTo(mapList);
@@ -678,12 +676,6 @@
                         if (!isNaN(lat) && !isNaN(lon)) {
                             const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
                             marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Kec: ${kec} | Desa: ${desa}`);
-                            
-                            // Saat pin diklik di peta langsung, tampilkan poligon titik itu saja & hapus poligon lain
-                            marker.on('click', () => {
-                                mapList.setView([lat, lon], 16);
-                                pilihDanTampilkanLp2bPoktan(lat, lon);
-                            });
                         }
                     }
 
@@ -696,7 +688,6 @@
                     row.onclick = () => {
                         if (!isNaN(lat) && !isNaN(lon) && lat !== 0) {
                             mapList.setView([lat, lon], 16);
-                            // Tampilkan hanya poligon titik yang diklik dan bersihkan yang lama agar ringan
                             pilihDanTampilkanLp2bPoktan(lat, lon);
                         } else {
                             alert("Koordinat tidak valid.");
@@ -737,27 +728,18 @@
         }
     }
 
-    // Fungsi menampilkan poligon LP2B khusus pada titik yang diklik saja (poligon sebelumnya otomatis dihapus agar ringan)
     async function pilihDanTampilkanLp2bPoktan(lat, lon) {
         showStatusModal("Memuat Analisis...", "Mengambil poligon LP2B...", true);
         const lp2b = await muatDataLP2BGlobal();
         document.getElementById('statusModal').style.display = 'none';
 
-        // Bersihkan layer poligon sebelumnya agar tetap ringan
         listLp2bLayer.clearLayers();
-        
         const pt = turf.point([lon, lat]);
         let targetPolygonFeature = null, masukLp2b = false;
 
         if (lp2b && lp2b.features) {
             for (let f of lp2b.features) {
-                try { 
-                    if (turf.booleanPointInPolygon(pt, f)) { 
-                        masukLp2b = true; 
-                        targetPolygonFeature = f; 
-                        break; 
-                    } 
-                } catch (err) {}
+                try { if (turf.booleanPointInPolygon(pt, f)) { masukLp2b = true; targetPolygonFeature = f; break; } } catch (err) {}
             }
             if (!targetPolygonFeature) {
                 let minDistance = Infinity;
@@ -771,13 +753,11 @@
         }
 
         if (targetPolygonFeature) {
-            // Tampilkan hanya poligon LP2B yang kena di titik pin tersebut saja
             L.geoJSON(targetPolygonFeature, {
                 style: { color: masukLp2b ? "#27ae60" : "#e67e22", weight: 4, fillColor: masukLp2b ? "#27ae60" : "#e67e22", fillOpacity: 0.6 }
             }).addTo(listLp2bLayer);
         }
     }
-
 
     // ================= FORMULIR PENGAJUAN =================
     document.addEventListener('DOMContentLoaded', () => {
