@@ -873,18 +873,26 @@
     }
 
     async function prosesValidasiDanAnalisis() {
-        if (document.getElementById('nik').value.length !== 16) { 
+        // 1. Validasi NIK
+        const nikInput = document.getElementById('nik');
+        if (!nikInput || nikInput.value.length !== 16) { 
             alert("NIK harus 16 digit!"); 
             return; 
         }
         
-        if (!polylineRute) plotKePetaForm(false);
-        const ll = polylineRute ? polylineRute.getLatLngs() : [];
+        // 2. Validasi Rute di Peta
+        if (typeof polylineRute === 'undefined' || !polylineRute) {
+            if (typeof plotKePetaForm === 'function') {
+                plotKePetaForm(false);
+            }
+        }
+        const ll = (typeof polylineRute !== 'undefined' && polylineRute) ? polylineRute.getLatLngs() : [];
         if (ll.length < 2) { 
             alert("Rute jalan belum dibuat di peta!"); 
             return; 
         }
 
+        // 3. Tampilkan Modal Loading
         showStatusModal("Menganalisis Spasial...", "Memuat data LP2B...", true);
         
         try {
@@ -905,8 +913,8 @@
             const ptB = turf.point([ll[ll.length - 1].lng, ll[ll.length - 1].lat]);
             const line = turf.lineString(ll.map(p => [p.lng, p.lat]));
             
-            // Radius buffer diuji coba 50 km untuk memastikan poligon terdeteksi
-            const buf = turf.buffer(line, 50, { units: 'kilometers' });
+            // --- RADIUS BUFFER 10 KM ---
+            const buf = turf.buffer(line, 10, { units: 'kilometers' });
 
             let inA = false;
             let inB = false;
@@ -922,29 +930,38 @@
                 } catch (err) {}
             });
 
-            console.log("Poligon yang cocok dengan rute (Radius 50 km):", matchedFeatures.length);
+            console.log("Poligon yang cocok dengan rute (Radius 10 km):", matchedFeatures.length);
 
-            layerLp2bForm.clearLayers();
-            if (matchedFeatures.length > 0) {
-                const featureCollection = turf.featureCollection(matchedFeatures);
-                L.geoJSON(featureCollection, {
-                    pane: 'lp2bPane',
-                    style: { 
-                        color: "#27ae60", 
-                        weight: 2, 
-                        fillColor: "#27ae60", 
-                        fillOpacity: 0.5 
+            if (typeof layerLp2bForm !== 'undefined' && layerLp2bForm) {
+                layerLp2bForm.clearLayers();
+                if (matchedFeatures.length > 0) {
+                    const featureCollection = turf.featureCollection(matchedFeatures);
+                    L.geoJSON(featureCollection, {
+                        pane: 'lp2bPane',
+                        style: { 
+                            color: "#27ae60", 
+                            weight: 2, 
+                            fillColor: "#27ae60", 
+                            fillOpacity: 0.5 
+                        }
+                    }).addTo(layerLp2bForm);
+                    
+                    if (typeof mapForm !== 'undefined' && mapForm) {
+                        mapForm.fitBounds(layerLp2bForm.getBounds());
                     }
-                }).addTo(layerLp2bForm);
-                
-                mapForm.fitBounds(layerLp2bForm.getBounds());
+                }
             }
 
             document.getElementById('statusModal').style.display = 'none';
 
+            // 4. Pengecekan Titik Awal & Akhir dalam LP2B
             if (inA && inB) {
                 if (confirm("✅ Titik awal dan akhir valid berada di dalam kawasan LP2B! Lanjutkan pengiriman data?")) {
-                    kirimDataKeBackend();
+                    if (typeof kirimDataKeBackend === 'function') {
+                        kirimDataKeBackend();
+                    } else {
+                        console.error("Fungsi kirimDataKeBackend belum didefinisikan.");
+                    }
                 }
             } else {
                 alert("❌ Dibatalkan: Titik awal dan akhir rute jalan harus berada di dalam kawasan LP2B.");
