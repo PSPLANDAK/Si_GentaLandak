@@ -675,7 +675,14 @@
                         lat = parseFloat(p[0]); lon = parseFloat(p[1]);
                         if (!isNaN(lat) && !isNaN(lon)) {
                             const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
-                            marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Kec: ${kec} | Desa: ${desa}`);
+                            
+                            // Event klik marker untuk memunculkan poligon LP2B terkait saja
+                            marker.on('click', () => {
+                                mapList.setView([lat, lon], 16);
+                                pilihDanTampilkanLp2bPoktan(lat, lon);
+                            });
+
+                            marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Kec: ${kec} | Desa: ${desa}<br><small style="color:var(--primary);">Klik untuk muat poligon LP2B</small>`);
                         }
                     }
 
@@ -729,33 +736,34 @@
     }
 
     async function pilihDanTampilkanLp2bPoktan(lat, lon) {
-        showStatusModal("Memuat Analisis...", "Mengambil poligon LP2B...", true);
+        // Bersihkan poligon sebelumnya agar peta ringan dan tidak bertumpuk
+        listLp2bLayer.clearLayers();
+
+        showStatusModal("Memuat Analisis...", "Mencari poligon LP2B...", true);
         const lp2b = await muatDataLP2BGlobal();
         document.getElementById('statusModal').style.display = 'none';
 
-        listLp2bLayer.clearLayers();
         const pt = turf.point([lon, lat]);
-        let targetPolygonFeature = null, masukLp2b = false;
+        let matchedFeatures = [];
 
         if (lp2b && lp2b.features) {
-            for (let f of lp2b.features) {
-                try { if (turf.booleanPointInPolygon(pt, f)) { masukLp2b = true; targetPolygonFeature = f; break; } } catch (err) {}
-            }
-            if (!targetPolygonFeature) {
-                let minDistance = Infinity;
-                lp2b.features.forEach(f => {
-                    try {
-                        const dist = turf.pointToPolygonDistance(pt, f, { units: 'kilometers' });
-                        if (dist < minDistance) { minDistance = dist; targetPolygonFeature = f; }
-                    } catch (err) {}
-                });
-            }
+            lp2b.features.forEach(f => {
+                try {
+                    // Cek apakah titik berada di dalam poligon atau bersentuhan langsung
+                    if (turf.booleanPointInPolygon(pt, f) || turf.booleanIntersects(pt, f)) {
+                        matchedFeatures.push(f);
+                    }
+                } catch (err) {}
+            });
         }
 
-        if (targetPolygonFeature) {
-            L.geoJSON(targetPolygonFeature, {
-                style: { color: masukLp2b ? "#27ae60" : "#e67e22", weight: 4, fillColor: masukLp2b ? "#27ae60" : "#e67e22", fillOpacity: 0.6 }
+        if (matchedFeatures.length > 0) {
+            // Hanya tampilkan poligon yang bersentuhan dengan pin yang dipilih
+            L.geoJSON(matchedFeatures, {
+                style: { color: "#27ae60", weight: 4, fillColor: "#27ae60", fillOpacity: 0.6 }
             }).addTo(listLp2bLayer);
+        } else {
+            alert("ℹ️ Tidak ada poligon LP2B yang bersentuhan langsung dengan titik koordinat ini.");
         }
     }
 
