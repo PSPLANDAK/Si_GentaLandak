@@ -279,7 +279,7 @@
             <button class="btn-action-check" onclick="jalankanPencarianCheck()">🔍 Cari di Peta</button>
             <button class="btn-gps-check" onclick="ambilGPSCheckPage()">📍 Ambil Titik GPS Perangkat Saya</button>
             <div id="infoRadiusCheck" style="font-size: 12px; color: #444; margin-top: 5px; line-height: 1.4;">
-                <i>Tip: Masukkan koordinat atau klik tombol GPS untuk memeriksa status kawasan LP2B.</i>
+                <i>Tip: Masukkan koordinat atau klik tombol GPS untuk memeriksa status kawasan LP2B. Pin juga bisa digeser langsung di peta.</i>
             </div>
         </div>
         <div id="mapCheck"></div>
@@ -316,7 +316,7 @@
 
 <!-- HALAMAN 3: FORMULIR PENGAJUAN JUT & HORTI -->
 <div id="form-page" class="page-section">
-    <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️️ Menu Utama</button>
+    <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅ Menu Utama</button>
     
     <div class="app-wrapper-form" style="width: 100%; height: 100%;">
         <div class="sidebar-form" style="padding-top: 50px;">
@@ -581,6 +581,14 @@
         if (checkMarker) mapCheck.removeLayer(checkMarker);
         checkMarker = L.marker([lat, lon], { draggable: true }).addTo(mapCheck);
         
+        // --- EVENT AGAR OTOMATIS MENGISI KOLOM & ANALISIS ULANG SAAT PIN DIGESER ---
+        checkMarker.on('dragend', function(e) {
+            const c = e.target.getLatLng();
+            document.getElementById('inputCariCheck').value = `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`;
+            prosesAnalisisCheckPoint(c.lat, c.lng, "Titik Geser Koordinat");
+        });
+        // ------------------------------------------------------------------------
+
         let statusTeks = masukLp2b ? 
             `<span style="color:var(--success); font-weight:bold;">✔ MASUK KAWASAN LP2B</span>` : 
             `<span style="color:var(--danger); font-weight:bold;">❌ DI LUAR LP2B</span><br><small>Poligon terdekat berjarak ±${minDistance.toFixed(2)} km</small>`;
