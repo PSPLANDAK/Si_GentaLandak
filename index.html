@@ -288,7 +288,7 @@
 
 <!-- HALAMAN 2: DAFTAR POKTAN DENGAN FOLDER BREAKDOWN & TOMBOL ADMIN -->
 <div id="list-page" class="page-section">
-    <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️ Menu Utama</button>
+    <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️️ Menu Utama</button>
     <div class="list-map-container">
         <div class="list-floating-panel">
             <h4 style="margin: 0 0 4px 0; color: var(--primary);">Daftar & Folder Breakdown Poktan</h4>
@@ -542,26 +542,46 @@
         let masukLp2b = false, targetPolygonFeature = null, minDistance = Infinity;
 
         if (lp2b && lp2b.features) {
+            // 1. Cek apakah titik berada di dalam atau bersentuhan langsung dengan poligon LP2B
             for (let f of lp2b.features) {
-                try { if (turf.booleanPointInPolygon(pt, f)) { masukLp2b = true; targetPolygonFeature = f; break; } } catch (err) {}
+                try { 
+                    if (turf.booleanPointInPolygon(pt, f) || turf.booleanIntersects(pt, f)) { 
+                        masukLp2b = true; 
+                        targetPolygonFeature = f; 
+                        break; 
+                    } 
+                } catch (err) {}
             }
+
+            // 2. Jika tidak masuk/bersentuhan, cari poligon terdekat
             if (!masukLp2b) {
                 lp2b.features.forEach(f => {
                     try {
                         const dist = turf.pointToPolygonDistance(pt, f, { units: 'kilometers' });
-                        if (dist < minDistance) { minDistance = dist; targetPolygonFeature = f; }
+                        if (dist < minDistance) { 
+                            minDistance = dist; 
+                            targetPolygonFeature = f; 
+                        }
                     } catch (err) {}
                 });
             }
         }
 
+        // Tampilkan poligon di peta (Hijau jika masuk, Oranye jika di luar tapi menampilkan terdekat)
         if (targetPolygonFeature) {
-            L.geoJSON(targetPolygonFeature, { style: { color: masukLp2b ? "#27ae60" : "#e67e22", weight: 4, fillColor: masukLp2b ? "#27ae60" : "#e67e22", fillOpacity: 0.6 } }).addTo(checkLp2bLayer);
+            let warnaPolygon = masukLp2b ? "#27ae60" : "#e67e22";
+            L.geoJSON(targetPolygonFeature, { 
+                style: { color: warnaPolygon, weight: 4, fillColor: warnaPolygon, fillOpacity: 0.6 } 
+            }).addTo(checkLp2bLayer);
         }
 
         if (checkMarker) mapCheck.removeLayer(checkMarker);
         checkMarker = L.marker([lat, lon], { draggable: true }).addTo(mapCheck);
-        let statusTeks = masukLp2b ? `<span style="color:var(--success); font-weight:bold;">✔ MASUK KAWASAN LP2B</span>` : `<span style="color:var(--danger); font-weight:bold;">❌ DI LUAR LP2B</span><br><small>Terdekat (±${minDistance.toFixed(2)} km)</small>`;
+        
+        let statusTeks = masukLp2b ? 
+            `<span style="color:var(--success); font-weight:bold;">✔ MASUK KAWASAN LP2B</span>` : 
+            `<span style="color:var(--danger); font-weight:bold;">❌ DI LUAR LP2B</span><br><small>Poligon terdekat berjarak ±${minDistance.toFixed(2)} km</small>`;
+        
         checkMarker.bindPopup(`<b>${labelInfo}</b><br>Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}<br>${statusTeks}`).openPopup();
         document.getElementById('infoRadiusCheck').innerHTML = `<b>Status Analisis:</b><br>${statusTeks}<br><b>Koordinat:</b> ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
         mapCheck.setView([lat, lon], 15);
@@ -676,7 +696,6 @@
                         if (!isNaN(lat) && !isNaN(lon)) {
                             const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
                             
-                            // Event klik marker untuk memunculkan poligon LP2B terkait saja
                             marker.on('click', () => {
                                 mapList.setView([lat, lon], 16);
                                 pilihDanTampilkanLp2bPoktan(lat, lon);
@@ -736,7 +755,6 @@
     }
 
     async function pilihDanTampilkanLp2bPoktan(lat, lon) {
-        // Bersihkan poligon sebelumnya agar peta ringan dan tidak bertumpuk
         listLp2bLayer.clearLayers();
 
         showStatusModal("Memuat Analisis...", "Mencari poligon LP2B...", true);
@@ -749,7 +767,6 @@
         if (lp2b && lp2b.features) {
             lp2b.features.forEach(f => {
                 try {
-                    // Cek apakah titik berada di dalam poligon atau bersentuhan langsung
                     if (turf.booleanPointInPolygon(pt, f) || turf.booleanIntersects(pt, f)) {
                         matchedFeatures.push(f);
                     }
@@ -758,7 +775,6 @@
         }
 
         if (matchedFeatures.length > 0) {
-            // Hanya tampilkan poligon yang bersentuhan dengan pin yang dipilih
             L.geoJSON(matchedFeatures, {
                 style: { color: "#27ae60", weight: 4, fillColor: "#27ae60", fillOpacity: 0.6 }
             }).addTo(listLp2bLayer);
