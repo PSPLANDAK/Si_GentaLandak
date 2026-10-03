@@ -288,7 +288,7 @@
 
 <!-- HALAMAN 2: DAFTAR POKTAN DENGAN FOLDER BREAKDOWN & TOMBOL ADMIN -->
 <div id="list-page" class="page-section">
-    <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️️ Menu Utama</button>
+    <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅ Menu Utama</button>
     <div class="list-map-container">
         <div class="list-floating-panel">
             <h4 style="margin: 0 0 4px 0; color: var(--primary);">Daftar & Folder Breakdown Poktan</h4>
@@ -316,7 +316,7 @@
 
 <!-- HALAMAN 3: FORMULIR PENGAJUAN JUT & HORTI -->
 <div id="form-page" class="page-section">
-    <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️ Menu Utama</button>
+    <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅️️ Menu Utama</button>
     
     <div class="app-wrapper-form" style="width: 100%; height: 100%;">
         <div class="sidebar-form" style="padding-top: 50px;">
@@ -553,11 +553,14 @@
                 } catch (err) {}
             }
 
-            // 2. Jika tidak masuk/bersentuhan, cari poligon terdekat
+            // 2. Jika tidak masuk/bersentuhan, cari poligon terdekat menggunakan garis tepi poligon
             if (!masukLp2b) {
                 lp2b.features.forEach(f => {
                     try {
-                        const dist = turf.pointToPolygonDistance(pt, f, { units: 'kilometers' });
+                        const line = turf.polygonToLine(f);
+                        const nearest = turf.nearestPointOnLine(line, pt);
+                        const dist = turf.distance(pt, nearest, { units: 'kilometers' });
+                        
                         if (dist < minDistance) { 
                             minDistance = dist; 
                             targetPolygonFeature = f; 
