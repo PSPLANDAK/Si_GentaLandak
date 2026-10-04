@@ -141,7 +141,6 @@
 
         .page-section.active { display: flex; }
 
-        /* TOMBOL KEMBALI DIUBAH MENJADI FIXED AGAR TIDAK HILANG SAAT DI-SCROLL */
         .btn-back-menu {
             position: fixed; top: calc(env(safe-area-inset-top) + 15px); left: 15px; z-index: 5000;
             background: white; color: var(--dark); border: 2px solid var(--border);
@@ -214,7 +213,6 @@
         }
         .poktan-item-row:hover { background: #f0f4f8; border-color: var(--primary); }
 
-        /* TOMBOL DRIVE & SPREADSHEET DI DALAM PANEL */
         .admin-box-menu {
             border-top: 2px dashed var(--border); margin-top: 5px; padding-top: 10px;
             display: flex; flex-direction: column; gap: 8px;
@@ -462,7 +460,7 @@
                 </div>
 
                 <button type="submit" id="btnSubmit" class="btn-submit">🚀 Kirim Berkas & Analisis LP2B</button>
-                <button type="button" id="btnPrint" class="btn-print" onclick="cetakBuktiPDF()">🖨️ Cetak Bukti Pengajuan (PDF)</button>
+                <button type="button" id="btnPrint" class="btn-print" onclick="cetakBuktiPDF()">🖨️️ Cetak Bukti Pengajuan (PDF)</button>
             </form>
         </div>
 
@@ -495,7 +493,6 @@
             }
         }, 1500);
 
-        // Inisialisasi State History awal halaman utama
         history.replaceState({ page: 'landing-page' }, '');
     });
 
@@ -519,7 +516,6 @@
     let masterDataPoktan = [];
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNgfCuwucQHTTExviIrIfbRc59s-k5b57tillfR8oRl80fszgYRmfMyg5yWfvBIEq6/exec";
 
-    // FUNGSI NAVIGASI ANTAR HALAMAN & MANAJEMEN BROWSER HISTORY
     function bukaHalaman(pageId, pushToHistory = true) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
         document.getElementById('landing-page').style.display = 'none';
@@ -545,7 +541,6 @@
         }
     }
 
-    // LISTENER TOMBOL KEMBALI BAWAAN HP / BROWSER
     window.addEventListener('popstate', function(event) {
         if (event.state && event.state.page) {
             bukaHalaman(event.state.page, false);
@@ -679,12 +674,14 @@
     L.control.zoom({ position: 'bottomright' }).addTo(mapList);
     let listMarkersGroup = new L.FeatureGroup().addTo(mapList);
     let listLp2bLayer = new L.FeatureGroup().addTo(mapList);
+    let listRuteLayer = new L.FeatureGroup().addTo(mapList); // LAYER GARIS RUTE DI HALAMAN 2
 
     async function muatDaftarPoktanKeFolder() {
         const container = document.getElementById('containerFolderPoktan');
         container.innerHTML = `<i style="font-size: 12px; color: #888;">Memuat data dari server...</i>`;
         listMarkersGroup.clearLayers();
         listLp2bLayer.clearLayers();
+        listRuteLayer.clearLayers();
 
         try {
             const res = await fetch(GOOGLE_SCRIPT_URL);
@@ -703,6 +700,7 @@
         const container = document.getElementById('containerFolderPoktan');
         container.innerHTML = '';
         listMarkersGroup.clearLayers();
+        listRuteLayer.clearLayers();
 
         if (dataArray.length === 0) {
             container.innerHTML = `<i style="font-size: 12px; color: #888;">Data tidak ditemukan.</i>`;
@@ -754,21 +752,29 @@
                 };
 
                 listDesaItem.forEach(r => {
-                    const coord = r["Lat/Lon Awal"] || "";
-                    let lat = 0, lon = 0;
-                    if (coord.includes(",")) {
-                        const p = coord.split(",");
-                        lat = parseFloat(p[0]); lon = parseFloat(p[1]);
-                        if (!isNaN(lat) && !isNaN(lon)) {
-                            const marker = L.marker([lat, lon]).addTo(listMarkersGroup);
-                            
-                            marker.on('click', () => {
-                                mapList.setView([lat, lon], 16);
-                                pilihDanTampilkanLp2bPoktan(lat, lon);
-                            });
+                    const coordAwal = r["Lat/Lon Awal"] || "";
+                    const coordAkhir = r["Lat/Lon Akhir"] || "";
+                    
+                    let latA = 0, lonA = 0, latB = 0, lonB = 0;
+                    
+                    if (coordAwal.includes(",")) {
+                        const pA = coordAwal.split(",");
+                        latA = parseFloat(pA[0]); lonA = parseFloat(pA[1]);
+                    }
+                    
+                    if (coordAkhir && coordAkhir.includes(",")) {
+                        const pB = coordAkhir.split(",");
+                        latB = parseFloat(pB[0]); lonB = parseFloat(pB[1]);
+                    }
 
-                            marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Kec: ${kec} | Desa: ${desa}<br><small style="color:var(--primary);">Klik untuk muat poligon LP2B</small>`);
-                        }
+                    if (!isNaN(latA) && !isNaN(lonA) && latA !== 0) {
+                        const marker = L.marker([latA, lonA]).addTo(listMarkersGroup);
+                        
+                        marker.on('click', () => {
+                            tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB);
+                        });
+
+                        marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Kec: ${kec} | Desa: ${desa}<br><small style="color:var(--primary);">Klik untuk muat rute & poligon LP2B</small>`);
                     }
 
                     const row = document.createElement('div');
@@ -778,9 +784,8 @@
                         <span style="font-size: 11px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"}</span>
                     `;
                     row.onclick = () => {
-                        if (!isNaN(lat) && !isNaN(lon) && lat !== 0) {
-                            mapList.setView([lat, lon], 16);
-                            pilihDanTampilkanLp2bPoktan(lat, lon);
+                        if (!isNaN(latA) && !isNaN(lonA) && latA !== 0) {
+                            tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB);
                         } else {
                             alert("Koordinat tidak valid.");
                         }
@@ -797,6 +802,50 @@
             kecDiv.appendChild(kecBody);
             container.appendChild(kecDiv);
         });
+    }
+
+    async function tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB) {
+        listRuteLayer.clearLayers();
+        
+        let pointsToFit = [[latA, lonA]];
+        if (!isNaN(latB) && !isNaN(lonB) && latB !== 0) {
+            pointsToFit.push([latB, lonB]);
+            L.polyline([[latA, lonA], [latB, lonB]], {
+                color: '#e74c3c',
+                weight: 5,
+                opacity: 0.8
+            }).addTo(listRuteLayer);
+        }
+
+        if (pointsToFit.length > 1) {
+            mapList.fitBounds(L.latLngBounds(pointsToFit), { padding: [50, 50] });
+        } else {
+            mapList.setView([latA, lonA], 16);
+        }
+
+        listLp2bLayer.clearLayers();
+        showStatusModal("Memuat Analisis...", "Mencari poligon LP2B & Rute...", true);
+        const lp2b = await muatDataLP2BGlobal();
+        document.getElementById('statusModal').style.display = 'none';
+
+        const ptA = turf.point([lonA, latA]);
+        let matchedFeatures = [];
+
+        if (lp2b && lp2b.features) {
+            lp2b.features.forEach(f => {
+                try {
+                    if (turf.booleanPointInPolygon(ptA, f) || turf.booleanIntersects(ptA, f)) {
+                        matchedFeatures.push(f);
+                    }
+                } catch (err) {}
+            });
+        }
+
+        if (matchedFeatures.length > 0) {
+            L.geoJSON(matchedFeatures, {
+                style: { color: "#27ae60", weight: 4, fillColor: "#27ae60", fillOpacity: 0.6 }
+            }).addTo(listLp2bLayer);
+        }
     }
 
     function filterDataPoktanWilayah() {
@@ -817,35 +866,6 @@
             alert("🌐 Semua pin titik poktan ditampilkan di peta!");
         } else {
             alert("Tidak ada pin koordinat untuk ditampilkan.");
-        }
-    }
-
-    async function pilihDanTampilkanLp2bPoktan(lat, lon) {
-        listLp2bLayer.clearLayers();
-
-        showStatusModal("Memuat Analisis...", "Mencari poligon LP2B...", true);
-        const lp2b = await muatDataLP2BGlobal();
-        document.getElementById('statusModal').style.display = 'none';
-
-        const pt = turf.point([lon, lat]);
-        let matchedFeatures = [];
-
-        if (lp2b && lp2b.features) {
-            lp2b.features.forEach(f => {
-                try {
-                    if (turf.booleanPointInPolygon(pt, f) || turf.booleanIntersects(pt, f)) {
-                        matchedFeatures.push(f);
-                    }
-                } catch (err) {}
-            });
-        }
-
-        if (matchedFeatures.length > 0) {
-            L.geoJSON(matchedFeatures, {
-                style: { color: "#27ae60", weight: 4, fillColor: "#27ae60", fillOpacity: 0.6 }
-            }).addTo(listLp2bLayer);
-        } else {
-            alert("ℹ️ Tidak ada poligon LP2B yang bersentuhan langsung dengan titik koordinat ini.");
         }
     }
 
