@@ -292,7 +292,7 @@
     <p style="font-size: 12.5px; color: #555; margin-bottom: 8px;">Dinas Ketahanan Pangan dan Pertanian Kabupaten Landak</p>
     
     <!-- TOMBOL WHATSAPP -->
-    <a href="https://wa.me/6282153916403" target="_blank" class="whatsapp-menu-btn">
+    <a href="https://wa.me/6282254683173" target="_blank" class="whatsapp-menu-btn">
         <svg viewBox="0 0 24 24">
             <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
         </svg>
@@ -529,8 +529,8 @@
 
     let cachedLp2bData = null;
     let masterDataPoktan = [];
-    let proposalFilePayload = null; // Menyimpan data base64 proposal
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwcq10jK-qfaEFfbTxDO5Fdm-30K_l1UQxq-cvaT_CGCrfDwnaupwuL_XnmIjWJt291/exec";
+    let proposalFilePayload = null; 
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8d1wXK0GvWuARjwniM9Or4EpDPYoopPy0PL7nebE7NTZ_5GDT3kTIwppZDauzHsSp/exec";
 
     function bukaHalaman(pageId, pushToHistory = true) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
@@ -1013,6 +1013,8 @@
         document.getElementById('lbl-panjang').innerText = total >= 1000 ? (total / 1000).toFixed(2) + " km" : total.toFixed(2) + " meter";
     }
 
+    let lp2bBeririsanGlobal = null;
+
     async function prosesValidasiDanAnalisis() {
         if (document.getElementById('nik').value.length !== 16) { alert("NIK harus 16 digit!"); return; }
         if (!proposalFilePayload) { alert("Harap unggah berkas proposal terlebih dahulu!"); return; }
@@ -1029,24 +1031,34 @@
             const buf = turf.buffer(line, 5, { units: 'kilometers' });
 
             let inA = false, inB = false;
+            let matchedPolygon = null;
             layerLp2bForm.clearLayers();
+            
+            if (lp2b && lp2b.features) {
+                lp2b.features.forEach(f => {
+                    try {
+                        if (turf.booleanIntersects(buf, f)) {
+                            if (turf.booleanPointInPolygon(ptA, f)) inA = true;
+                            if (turf.booleanPointInPolygon(ptB, f)) inB = true;
+                            if (!matchedPolygon) matchedPolygon = f; // Ambil poligon utama area terkait
+                        }
+                    } catch (e) {}
+                });
+            }
+
+            lp2bBeririsanGlobal = matchedPolygon;
+
             if (lp2b) {
                 L.geoJSON(lp2b, {
                     pane: 'lp2bPane',
                     filter: f => turf.booleanIntersects(buf, f),
-                    style: f => {
-                        try {
-                            if (turf.booleanPointInPolygon(ptA, f)) inA = true;
-                            if (turf.booleanPointInPolygon(ptB, f)) inB = true;
-                        } catch (e) {}
-                        return { color: "#27ae60", weight: 2, fillColor: "#27ae60", fillOpacity: 0.5 };
-                    }
+                    style: { color: "#27ae60", weight: 2, fillColor: "#27ae60", fillOpacity: 0.5 }
                 }).addTo(layerLp2bForm);
             }
 
             document.getElementById('statusModal').style.display = 'none';
             if (inA && inB) {
-                if (confirm("✅ Titik valid dalam LP2B! Kirim data sekarang?")) kirimDataKeBackend();
+                if (confirm("✅ Titik valid dalam LP2B! Kirim data & generate SHP Areal sekarang?")) kirimDataKeBackend();
             } else {
                 alert("❌ Ditolak: Titik awal/akhir harus di dalam kawasan LP2B.");
             }
@@ -1058,13 +1070,14 @@
 
     async function kirimDataKeBackend() {
         showStatusModal("Mengirim Data...", "Menyimpan ke server & Drive...", true);
+        const namaPoktan = document.getElementById('nama_poktan').value;
         const payload = {
-            nama_poktan: document.getElementById('nama_poktan').value,
+            nama_poktan: namaPoktan,
             kecamatan: document.getElementById('kecamatan').value,
             desa: document.getElementById('desa').value,
             nama_ketua: document.getElementById('nama_ketua').value,
             nik: document.getElementById('nik').value,
-            no_hp: document.getElementById('no_hp').value, // Kolom Nomor HP Ketua
+            no_hp: document.getElementById('no_hp').value,
             jumlah_anggota: document.getElementById('jumlah_anggota').value,
             luas_lahan: document.getElementById('luas_lahan').value,
             lat_awal: document.getElementById('lat_awal').value,
@@ -1072,29 +1085,57 @@
             lat_akhir: document.getElementById('lat_akhir').value,
             lon_akhir: document.getElementById('lon_akhir').value,
             panjang_jalan: document.getElementById('lbl-panjang').innerText,
-            proposal: proposalFilePayload, // Berkas Proposal ke Drive
+            proposal: proposalFilePayload,
             foto_sawah: photosSawah,
             foto_jalan: photosJalan
         };
+
         try {
             const res = await fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
             const result = await res.json();
-            document.getElementById('statusModal').style.display = 'none';
+
             if (result.status === "success") {
-                alert("🎉 Selamat Data & Proposal Anda Sudah Terinput ke Spreadsheet dan Google Drive!");
+                // Lanjutkan generate dan kirim SHP Areal khusus poktan ini ke Kolom R
+                if (polylineRute && lp2bBeririsanGlobal) {
+                    showStatusModal("Memproses SHP Areal...", "Memotong geometri & mengunggah ke Drive...", true);
+                    
+                    const ll = polylineRute.getLatLngs();
+                    const lineGeom = turf.lineString(ll.map(p => [p.lng, p.lat]));
+                    
+                    // Buat FeatureCollection berisi poligon area dan garis rute yang beririsan
+                    const collectionAreal = turf.featureCollection([
+                        lp2bBeririsanGlobal,
+                        lineGeom
+                    ]);
+
+                    const payloadSHP = {
+                        action: "upload_shp_areal",
+                        nama_poktan: namaPoktan,
+                        geojson_data: JSON.stringify(collectionAreal)
+                    };
+
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify(payloadSHP)
+                    });
+                }
+
+                document.getElementById('statusModal').style.display = 'none';
+                alert("🎉 Selamat! Data, Proposal, Folder, & File SHP Areal berhasil tersimpan otomatis!");
                 document.getElementById('mainForm').reset();
                 resetRutePetaForm();
-                photosSawah = []; photosJalan = []; proposalFilePayload = null;
+                photosSawah = []; photosJalan = []; proposalFilePayload = null; lp2bBeririsanGlobal = null;
                 document.getElementById('previewSawahGrid').innerHTML = '';
                 document.getElementById('previewJalanGrid').innerHTML = '';
                 document.getElementById('fileProposalInfo').innerText = '';
                 document.getElementById('btnPrint').style.display = 'block';
             } else {
+                document.getElementById('statusModal').style.display = 'none';
                 alert("Gagal: " + result.message);
             }
         } catch (e) {
             document.getElementById('statusModal').style.display = 'none';
-            alert("Jaringan bermasalah.");
+            alert("Terjadi kendala jaringan saat pengiriman data.");
         }
     }
 
