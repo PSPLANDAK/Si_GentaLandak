@@ -241,8 +241,6 @@
         input, select { padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13.5px; background-color: #fafafa; width: 100%; }
         input[type="file"] { padding: 8px; background-color: #fff; cursor: pointer; }
 
-        .file-info-label { font-size: 11.5px; color: #27ae60; margin-top: 4px; font-weight: 600; }
-
         .btn-gps { background-color: #e67e22; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; width: 100%; }
         .btn-preview { background-color: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; margin: 5px 0; width: 100%; }
         .btn-reset-rute { background-color: var(--danger); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-bottom: 15px; width: 100%; }
@@ -400,12 +398,6 @@
                         <input type="text" id="nik" maxlength="16" pattern="[0-9]{16}" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
                     </div>
                 </div>
-
-                <!-- TAMBAHAN KOLOM NOMOR HP KETUA -->
-                <div class="form-group">
-                    <label>Nomor HP / WhatsApp Ketua (Aktif)</label>
-                    <input type="tel" id="no_hp" placeholder="Contoh: 081234567890" pattern="[0-9+]*" oninput="this.value = this.value.replace(/[^0-9+]/g, '')" required>
-                </div>
                 
                 <div class="form-row">
                     <div class="form-group">
@@ -416,13 +408,6 @@
                         <label>Luas Lahan (Ha)</label>
                         <input type="number" step="0.01" id="luas_lahan" required>
                     </div>
-                </div>
-
-                <!-- TAMBAHAN KOLOM UNGGAH PROPOSAL -->
-                <div class="form-group">
-                    <label style="color: var(--primary);">📁 Unggah Berkas Proposal (PDF / Doc / Docx)</label>
-                    <input type="file" id="file_proposal" accept=".pdf,.doc,.docx" onchange="handleProposalUpload(this)" required>
-                    <div id="fileProposalInfo" class="file-info-label"></div>
                 </div>
 
                 <hr style="border:0; border-top: 1px dashed var(--border); margin: 15px 0;">
@@ -529,8 +514,7 @@
 
     let cachedLp2bData = null;
     let masterDataPoktan = [];
-    let proposalFilePayload = null; // Menyimpan data base64 proposal
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwcq10jK-qfaEFfbTxDO5Fdm-30K_l1UQxq-cvaT_CGCrfDwnaupwuL_XnmIjWJt291/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNgfCuwucQHTTExviIrIfbRc59s-k5b57tillfR8oRl80fszgYRmfMyg5yWfvBIEq6/exec";
 
     function bukaHalaman(pageId, pushToHistory = true) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
@@ -678,7 +662,13 @@
         if (!navigator.geolocation) { alert("GPS tidak didukung."); return; }
         showStatusModal("Mengakses GPS...", "Mendapatkan titik perangkat...", true);
         navigator.geolocation.getCurrentPosition(
-            (pos) => { document.getElementById('statusModal').style.display = 'none'; prosesAnalisisCheckPoint(pos.coords.latitude, pos.coords.longitude, "Lokasi Perangkat GPS"); },
+            (pos) => { 
+                document.getElementById('statusModal').style.display = 'none'; 
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                document.getElementById('inputCariCheck').value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+                prosesAnalisisCheckPoint(lat, lon, "Lokasi Perangkat GPS"); 
+            },
             (err) => { document.getElementById('statusModal').style.display = 'none'; alert("Gagal ambil GPS: " + err.message); },
             { enableHighAccuracy: true, timeout: 10000 }
         );
@@ -790,14 +780,14 @@
                             tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB);
                         });
 
-                        marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>No HP: ${r["No HP Ketua"] || "-"}<br>Kec: ${kec} | Desa: ${desa}<br><small style="color:var(--primary);">Klik untuk muat rute & poligon LP2B</small>`);
+                        marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>Kec: ${kec} | Desa: ${desa}<br><small style="color:var(--primary);">Klik untuk muat rute & poligon LP2B</small>`);
                     }
 
                     const row = document.createElement('div');
                     row.className = 'poktan-item-row';
                     row.innerHTML = `
                         <strong style="font-size: 12.5px; color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
-                        <span style="font-size: 11px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"} (${r["No HP Ketua"] || "-"})</span>
+                        <span style="font-size: 11px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"}</span>
                     `;
                     row.onclick = () => {
                         if (!isNaN(latA) && !isNaN(lonA) && latA !== 0) {
@@ -869,10 +859,9 @@
         const filtered = masterDataPoktan.filter(r => {
             const namaP = (r["Nama Poktan"] || "").toLowerCase();
             const namaK = (r["Nama Ketua"] || "").toLowerCase();
-            const noHp = (r["No HP Ketua"] || "").toLowerCase();
             const kec = (r["Kecamatan"] || "").toLowerCase();
             const desa = (r["Desa"] || "").toLowerCase();
-            return namaP.includes(keyword) || namaK.includes(keyword) || noHp.includes(keyword) || kec.includes(keyword) || desa.includes(keyword);
+            return namaP.includes(keyword) || namaK.includes(keyword) || kec.includes(keyword) || desa.includes(keyword);
         });
         renderFolderStruktur(filtered);
     }
@@ -923,27 +912,14 @@
     let photosSawah = [];
     let photosJalan = [];
 
-    function handleProposalUpload(input) {
-        const file = input.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            proposalFilePayload = {
-                name: file.name,
-                data: e.target.result
-            };
-            document.getElementById('fileProposalInfo').innerText = `✔ Berkas terpilih: ${file.name}`;
-        };
-        reader.readAsDataURL(file);
-    }
-
     function ambilLokasiGPSForm() {
         if (!navigator.geolocation) { alert("GPS tidak didukung."); return; }
         showStatusModal("Mengakses GPS...", "Mendapatkan titik koordinat...", true);
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 document.getElementById('statusModal').style.display = 'none';
-                const lat = pos.coords.latitude, lon = pos.coords.longitude;
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
                 document.getElementById('lat_awal').value = lat.toFixed(6);
                 document.getElementById('lon_awal').value = lon.toFixed(6);
                 mapForm.setView([lat, lon], 18);
@@ -1015,7 +991,6 @@
 
     async function prosesValidasiDanAnalisis() {
         if (document.getElementById('nik').value.length !== 16) { alert("NIK harus 16 digit!"); return; }
-        if (!proposalFilePayload) { alert("Harap unggah berkas proposal terlebih dahulu!"); return; }
         if (!polylineRute) plotKePetaForm(false);
         const ll = polylineRute ? polylineRute.getLatLngs() : [];
         if (ll.length < 2) { alert("Rute belum dibuat!"); return; }
@@ -1057,14 +1032,13 @@
     }
 
     async function kirimDataKeBackend() {
-        showStatusModal("Mengirim Data...", "Menyimpan ke server & Drive...", true);
+        showStatusModal("Mengirim Data...", "Menyimpan ke server...", true);
         const payload = {
             nama_poktan: document.getElementById('nama_poktan').value,
             kecamatan: document.getElementById('kecamatan').value,
             desa: document.getElementById('desa').value,
             nama_ketua: document.getElementById('nama_ketua').value,
             nik: document.getElementById('nik').value,
-            no_hp: document.getElementById('no_hp').value, // Kolom Nomor HP Ketua
             jumlah_anggota: document.getElementById('jumlah_anggota').value,
             luas_lahan: document.getElementById('luas_lahan').value,
             lat_awal: document.getElementById('lat_awal').value,
@@ -1072,7 +1046,6 @@
             lat_akhir: document.getElementById('lat_akhir').value,
             lon_akhir: document.getElementById('lon_akhir').value,
             panjang_jalan: document.getElementById('lbl-panjang').innerText,
-            proposal: proposalFilePayload, // Berkas Proposal ke Drive
             foto_sawah: photosSawah,
             foto_jalan: photosJalan
         };
@@ -1081,13 +1054,12 @@
             const result = await res.json();
             document.getElementById('statusModal').style.display = 'none';
             if (result.status === "success") {
-                alert("🎉 Selamat Data & Proposal Anda Sudah Terinput ke Spreadsheet dan Google Drive!");
+                alert("🎉 Selamat Data Anda Sudah Terinput!");
                 document.getElementById('mainForm').reset();
                 resetRutePetaForm();
-                photosSawah = []; photosJalan = []; proposalFilePayload = null;
+                photosSawah = []; photosJalan = [];
                 document.getElementById('previewSawahGrid').innerHTML = '';
                 document.getElementById('previewJalanGrid').innerHTML = '';
-                document.getElementById('fileProposalInfo').innerText = '';
                 document.getElementById('btnPrint').style.display = 'block';
             } else {
                 alert("Gagal: " + result.message);
@@ -1106,7 +1078,6 @@
                 <h2>BUKTI PENGAJUAN JUT - KAB. LANDAK</h2>
                 <p><b>Poktan:</b> ${document.getElementById('nama_poktan').value}</p>
                 <p><b>Ketua:</b> ${document.getElementById('nama_ketua').value}</p>
-                <p><b>No HP Ketua:</b> ${document.getElementById('no_hp').value}</p>
                 <p><b>Panjang:</b> ${document.getElementById('lbl-panjang').innerText}</p>
                 <script>window.print();<\/script>
             </body></html>
