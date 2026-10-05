@@ -20,6 +20,7 @@
             --primary: #1e3799;
             --success: #27ae60;
             --danger: #e74c3c;
+            --warning: #f39c12;
             --dark: #2c3e50;
             --bg-main: #f8f9fa;
             --border: #dcdde1;
@@ -246,6 +247,11 @@
         .btn-gps { background-color: #e67e22; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-bottom: 10px; width: 100%; }
         .btn-preview { background-color: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; margin: 5px 0; width: 100%; }
         .btn-reset-rute { background-color: var(--danger); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-bottom: 15px; width: 100%; }
+        
+        /* TOMBOL UNDO / REDO KHUSUS RUTE */
+        .btn-undo-rute { background-color: var(--warning); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .btn-redo-rute { background-color: #34495e; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+
         .summary-card { background-color: #f8f9fa; border: 1px solid var(--border); border-radius: 8px; padding: 12px 15px; margin-bottom: 15px; }
         .summary-item { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
         .photo-preview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px; }
@@ -401,7 +407,7 @@
                     </div>
                 </div>
 
-                <!-- TAMBAHAN KOLOM NOMOR HP KETUA -->
+                <!-- KOLOM NOMOR HP KETUA -->
                 <div class="form-group">
                     <label>Nomor HP / WhatsApp Ketua (Aktif)</label>
                     <input type="tel" id="no_hp" placeholder="Contoh: 081234567890" pattern="[0-9+]*" oninput="this.value = this.value.replace(/[^0-9+]/g, '')" required>
@@ -418,7 +424,7 @@
                     </div>
                 </div>
 
-                <!-- TAMBAHAN KOLOM UNGGAH PROPOSAL -->
+                <!-- KOLOM UNGGAH PROPOSAL -->
                 <div class="form-group">
                     <label style="color: var(--primary);">📁 Unggah Berkas Proposal (PDF / Doc / Docx)</label>
                     <input type="file" id="file_proposal" accept=".pdf,.doc,.docx" onchange="handleProposalUpload(this)" required>
@@ -449,6 +455,12 @@
                         <label>Lon Akhir (X)</label>
                         <input type="number" step="0.000001" id="lon_akhir" required>
                     </div>
+                </div>
+
+                <!-- TOMBOL KONTROL TAMBAHAN: UNDO & REDO TITIK RUTE -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                    <button type="button" class="btn-undo-rute" onclick="undoTitikRute()">↩️ Undo Titik Terakhir</button>
+                    <button type="button" class="btn-redo-rute" onclick="redoTitikRute()">↪️ Redo / Kembalikan</button>
                 </div>
 
                 <button type="button" class="btn-preview" onclick="plotKePetaForm(true)">👁️ Tampilkan Rute di Peta</button>
@@ -529,7 +541,7 @@
 
     let cachedLp2bData = null;
     let masterDataPoktan = [];
-    let proposalFilePayload = null; // Menyimpan data base64 proposal
+    let proposalFilePayload = null;
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTZ0OU2g-kdkzUv2_QIkJxiW3wzK5LEOxSZkIuJO10FtfaSKXkGq44w2Tu_hCFgW37/exec";
 
     function bukaHalaman(pageId, pushToHistory = true) {
@@ -886,7 +898,7 @@
         }
     }
 
-    // ================= FORMULIR PENGAJUAN =================
+    // ================= PETA HALAMAN 3 (FORMULIR) =================
     document.addEventListener('DOMContentLoaded', () => {
         const selectKecamatan = document.getElementById('kecamatan');
         Object.keys(wilayahLandak).sort().forEach(kec => {
@@ -922,6 +934,49 @@
     let gpsMarkerForm = null;
     let photosSawah = [];
     let photosJalan = [];
+
+    // PENYIMPANAN STACK UNTUK FITUR UNDO & REDO RUTE
+    let ruteUndoStack = [];
+    let ruteRedoStack = [];
+
+    function simpanStateRuteKeStack() {
+        if (!polylineRute) return;
+        const currentLatLngs = polylineRute.getLatLngs().map(latLng => ({ lat: latLng.lat, lng: latLng.lng }));
+        ruteUndoStack.push(currentLatLngs);
+        // Kosongkan redo stack ketika ada aksi gambar/perubahan baru
+        ruteRedoStack = [];
+    }
+
+    function undoTitikRute() {
+        if (!polylineRute) {
+            alert("Belum ada rute aktif di peta.");
+            return;
+        }
+        let latLngs = polylineRute.getLatLngs();
+        if (latLngs.length > 2) {
+            // Simpan posisi saat ini ke redo stack sebelum di-undo
+            ruteRedoStack.push(latLngs.map(l => ({ lat: l.lat, lng: l.lng })));
+            
+            latLngs.pop(); // Hapus titik terakhir
+            polylineRute.setLatLngs(latLngs);
+            updateFormDanJarak();
+        } else {
+            alert("Rute minimal harus menyisakan 2 titik (Awal dan Akhir). Gunakan tombol Reset jika ingin menghapus seluruh rute.");
+        }
+    }
+
+    function redoTitikRute() {
+        if (ruteRedoStack.length === 0) {
+            alert("Tidak ada aksi untuk di-redo.");
+            return;
+        }
+        let latLngs = polylineRute.getLatLngs();
+        ruteUndoStack.push(latLngs.map(l => ({ lat: l.lat, lng: l.lng })));
+
+        let restoredLatLngs = ruteRedoStack.pop();
+        polylineRute.setLatLngs(restoredLatLngs);
+        updateFormDanJarak();
+    }
 
     function handleProposalUpload(input) {
         const file = input.files[0];
@@ -972,8 +1027,22 @@
 
         if (!isNaN(latA) && !isNaN(lonA) && !isNaN(latB) && !isNaN(lonB)) {
             polylineRute = L.polyline([[latA, lonA], [latB, lonB]], { pane: 'rutePane', color: '#e74c3c', weight: 5 }).addTo(layerRute);
+            
+            // Inisialisasi Stack Awal
+            ruteUndoStack = [];
+            ruteRedoStack = [];
+
             polylineRute.pm.enable({ allowSelfIntersection: false });
-            polylineRute.on('pm:edit pm:vertexadded pm:vertexremoved pm:markerdrag', updateFormDanJarak);
+            
+            polylineRute.on('pm:vertexadded', function() {
+                simpanStateRuteKeStack();
+                updateFormDanJarak();
+            });
+
+            polylineRute.on('pm:vertexremoved pm:edit pm:markerdrag', function() {
+                updateFormDanJarak();
+            });
+
             if (autoZoom) mapForm.fitBounds(polylineRute.getBounds(), { padding: [40, 40] });
             updateHitungJarakLengkung();
         } else if (autoZoom) {
@@ -984,6 +1053,8 @@
     function resetRutePetaForm() {
         layerRute.clearLayers();
         polylineRute = null;
+        ruteUndoStack = [];
+        ruteRedoStack = [];
         document.getElementById('lat_awal').value = "";
         document.getElementById('lon_awal').value = "";
         document.getElementById('lat_akhir').value = "";
@@ -1064,7 +1135,7 @@
             desa: document.getElementById('desa').value,
             nama_ketua: document.getElementById('nama_ketua').value,
             nik: document.getElementById('nik').value,
-            no_hp: document.getElementById('no_hp').value, // Kolom Nomor HP Ketua
+            no_hp: document.getElementById('no_hp').value,
             jumlah_anggota: document.getElementById('jumlah_anggota').value,
             luas_lahan: document.getElementById('luas_lahan').value,
             lat_awal: document.getElementById('lat_awal').value,
@@ -1072,7 +1143,7 @@
             lat_akhir: document.getElementById('lat_akhir').value,
             lon_akhir: document.getElementById('lon_akhir').value,
             panjang_jalan: document.getElementById('lbl-panjang').innerText,
-            proposal: proposalFilePayload, // Berkas Proposal ke Drive
+            proposal: proposalFilePayload,
             foto_sawah: photosSawah,
             foto_jalan: photosJalan
         };
