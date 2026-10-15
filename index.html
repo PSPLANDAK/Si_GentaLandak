@@ -430,6 +430,12 @@
                     </div>
                 </div>
 
+                <!-- KOLOM TAHUN PENGAJUAN -->
+                <div class="form-group">
+                    <label>Tahun Pengajuan</label>
+                    <select id="tahun" required></select>
+                </div>
+
                 <!-- KOLOM UNGGAH PROPOSAL -->
                 <div class="form-group">
                     <label style="color: var(--primary);">📁 Unggah Berkas Proposal (PDF / Doc / Docx)</label>
@@ -547,7 +553,7 @@
     let cachedLp2bData = null;
     let masterDataPoktan = [];
     let proposalFilePayload = null;
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTZ0OU2g-kdkzUv2_QIkJxiW3wzK5LEOxSZkIuJO10FtfaSKXkGq44w2Tu_hCFgW37/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZmNFTzgfbN7gm_dnZNGm8qsqDFNJIRvzt5I3Rntlw3SuJSGyMyfDZ02XW2kWTaSjA/exec";
 
     function bukaHalaman(pageId, pushToHistory = true) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
@@ -1132,6 +1138,20 @@
         }
     }
 
+    function isiOpsiTahun() {
+        const sel = document.getElementById('tahun');
+        if (!sel) return;
+        const now = new Date().getFullYear();
+        sel.innerHTML = '';
+        for (let y = now - 1; y <= now + 3; y++) {
+            const o = document.createElement('option');
+            o.value = y; o.textContent = y;
+            if (y === now) o.selected = true;
+            sel.appendChild(o);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', isiOpsiTahun);
+
     async function kirimDataKeBackend() {
         showStatusModal("Mengirim Data...", "Menyimpan ke server & Drive...", true);
         const payload = {
@@ -1143,6 +1163,7 @@
             no_hp: document.getElementById('no_hp').value,
             jumlah_anggota: document.getElementById('jumlah_anggota').value,
             luas_lahan: document.getElementById('luas_lahan').value,
+            tahun: document.getElementById('tahun').value,
             lat_awal: document.getElementById('lat_awal').value,
             lon_awal: document.getElementById('lon_awal').value,
             lat_akhir: document.getElementById('lat_akhir').value,
@@ -1159,6 +1180,7 @@
             if (result.status === "success") {
                 alert("🎉 Selamat Data & Proposal Anda Sudah Terinput ke Spreadsheet dan Google Drive!");
                 document.getElementById('mainForm').reset();
+                isiOpsiTahun();
                 resetRutePetaForm();
                 photosSawah = []; photosJalan = []; proposalFilePayload = null;
                 document.getElementById('previewSawahGrid').innerHTML = '';
