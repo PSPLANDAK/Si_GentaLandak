@@ -14,6 +14,7 @@
     <!-- PUSTAKA JSZIP & TURF.JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mapbox/shp-write@0.4.3/dist/shpwrite.js"></script>
 
     <style>
         :root {
@@ -214,6 +215,15 @@
         }
         .poktan-item-row:hover { background: #f0f4f8; border-color: var(--primary); }
 
+        .poktan-item-row { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+        .poktan-item-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .btn-dl-shp {
+            background: var(--success); color: white; border: none; padding: 6px 10px;
+            border-radius: 5px; font-size: 11.5px; font-weight: bold; cursor: pointer;
+            white-space: nowrap; flex-shrink: 0; width: auto;
+        }
+        .btn-dl-shp:hover { background: #1e9a50; }
+
         .admin-box-menu {
             border-top: 2px dashed var(--border); margin-top: 5px; padding-top: 10px;
             display: flex; flex-direction: column; gap: 8px;
@@ -361,6 +371,7 @@
             <div class="admin-box-menu">
                 <button class="btn-sheet-link" onclick="aksesSpreadsheetAdmin()">📊 Buka & Download Spreadsheet Data</button>
                 <button class="btn-drive-link" onclick="aksesDriveAdmin()">📁 Buka & Download Master JUT (Google Drive)</button>
+                <button class="btn-drive-link" onclick="lengkapiShpDataLama()">🗂 Lengkapi SHP Data Lama ke Drive</button>
             </div>
         </div>
         <div id="mapList"></div>
@@ -553,6 +564,7 @@
     let cachedLp2bData = null;
     let masterDataPoktan = [];
     let proposalFilePayload = null;
+    let shpFilePayload = null;
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZmNFTzgfbN7gm_dnZNGm8qsqDFNJIRvzt5I3Rntlw3SuJSGyMyfDZ02XW2kWTaSjA/exec";
 
     function bukaHalaman(pageId, pushToHistory = true) {
@@ -813,15 +825,24 @@
                             tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB);
                         });
 
-                        marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>No HP: ${r["No HP Ketua"] || "-"}<br>Kec: ${kec} | Desa: ${desa}<br><small style="color:var(--primary);">Klik untuk muat rute & poligon LP2B</small>`);
+                        marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>No HP: ${ambilNoHp(r) || "-"}<br>Kec: ${kec} | Desa: ${desa}<br><small style="color:var(--primary);">Klik untuk muat rute & poligon LP2B</small>`);
                     }
 
                     const row = document.createElement('div');
                     row.className = 'poktan-item-row';
                     row.innerHTML = `
-                        <strong style="font-size: 12.5px; color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
-                        <span style="font-size: 11px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"} (${r["No HP Ketua"] || "-"})</span>
+                        <div class="poktan-item-info">
+                            <strong style="font-size: 12.5px; color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
+                            <span style="font-size: 11px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"} (${ambilNoHp(r) || "-"})</span>
+                        </div>
                     `;
+                    const btnShp = document.createElement('button');
+                    btnShp.type = 'button';
+                    btnShp.className = 'btn-dl-shp';
+                    btnShp.title = 'Download SHP poligon LP2B';
+                    btnShp.innerText = '⬇ SHP';
+                    btnShp.onclick = (ev) => { ev.stopPropagation(); downloadShpPoktan(r); };
+                    row.appendChild(btnShp);
                     row.onclick = () => {
                         if (!isNaN(latA) && !isNaN(lonA) && latA !== 0) {
                             tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB);
@@ -843,13 +864,159 @@
         });
     }
 
+    // ================= EKSPOR SHP (POLIGON LP2B + RUTE + PIN) =================
+    function ambilNoHp(r) {
+        return String(r["Nomor Hp ketua"] || r["No HP Ketua"] || "");
+    }
+
+    function namaFileAman(teks) {
+        return String(teks || "poktan").trim().replace(/[^\w\-]+/g, "_").replace(/^_+|_+$/g, "").substring(0, 40) || "poktan";
+    }
+
+    function bacaKoordinatRow(r) {
+        let latA = 0, lonA = 0, latB = 0, lonB = 0;
+        const ca = String(r["Lat/Lon Awal"] || ""), cb = String(r["Lat/Lon Akhir"] || "");
+        if (ca.includes(",")) { const p = ca.split(","); latA = parseFloat(p[0]); lonA = parseFloat(p[1]); }
+        if (cb.includes(",")) { const p = cb.split(","); latB = parseFloat(p[0]); lonB = parseFloat(p[1]); }
+        return { latA, lonA, latB, lonB };
+    }
+
+    // Titik rute lengkap dari kolom "Rute Jalan" (format "lat,lon;lat,lon"). Jika kosong -> garis lurus awal-akhir.
+    function ambilTitikRute(r, latA, lonA, latB, lonB) {
+        const str = String(r["Rute Jalan"] || "");
+        if (str.includes(";")) {
+            const pts = str.split(";").map(t => t.split(",").map(parseFloat)).filter(p => p.length === 2 && !isNaN(p[0]) && !isNaN(p[1]));
+            if (pts.length >= 2) return pts;
+        }
+        const hasil = [[latA, lonA]];
+        if (!isNaN(latB) && !isNaN(lonB) && latB !== 0) hasil.push([latB, lonB]);
+        return hasil;
+    }
+
+    function cariPolygonLP2B(lp2b, titikList) {
+        const hasil = [];
+        if (!lp2b || !lp2b.features) return hasil;
+        lp2b.features.forEach(f => {
+            try {
+                if (titikList.some(pt => turf.booleanPointInPolygon(pt, f))) hasil.push(f);
+            } catch (e) {}
+        });
+        return hasil;
+    }
+
+    // Menyusun fitur: poligon LP2B + garis rute + pin awal/akhir (nama field DBF maks 10 karakter)
+    function susunFiturSHP(poligon, titikRute, props) {
+        const fitur = [];
+        poligon.forEach(f => fitur.push({ type: 'Feature', properties: Object.assign({}, props, { Jenis: 'LP2B' }), geometry: f.geometry }));
+        if (titikRute.length >= 2) {
+            fitur.push({ type: 'Feature', properties: Object.assign({}, props, { Jenis: 'Rute' }),
+                geometry: { type: 'LineString', coordinates: titikRute.map(p => [p[1], p[0]]) } });
+        }
+        if (titikRute.length >= 1) {
+            const awal = titikRute[0], akhir = titikRute[titikRute.length - 1];
+            fitur.push({ type: 'Feature', properties: Object.assign({}, props, { Jenis: 'Pin Awal' }),
+                geometry: { type: 'Point', coordinates: [awal[1], awal[0]] } });
+            if (titikRute.length >= 2) {
+                fitur.push({ type: 'Feature', properties: Object.assign({}, props, { Jenis: 'Pin Akhir' }),
+                    geometry: { type: 'Point', coordinates: [akhir[1], akhir[0]] } });
+            }
+        }
+        return fitur;
+    }
+
+    function buatShpBase64(fitur, nama) {
+        return shpwrite.zip({ type: 'FeatureCollection', features: fitur }, {
+            outputType: 'base64',
+            compression: 'DEFLATE',
+            folder: nama,
+            types: { polygon: 'LP2B_' + nama, line: 'Rute_' + nama, point: 'Pin_' + nama }
+        });
+    }
+
+    function propsDariRow(r) {
+        return {
+            Poktan: String(r["Nama Poktan"] || ""),
+            Ketua: String(r["Nama Ketua"] || ""),
+            Kecamatan: String(r["Kecamatan"] || ""),
+            Desa: String(r["Desa"] || ""),
+            Tahun: String(r["Tahun"] || ""),
+            Luas_Ha: String(r["Luas Lahan (Ha)"] || r["Luas Lahan"] || ""),
+            Panjang: String(r["Panjang Jalan"] || "")
+        };
+    }
+
+    function bangunShpDariRow(r, lp2b) {
+        const k = bacaKoordinatRow(r);
+        if (isNaN(k.latA) || isNaN(k.lonA) || k.latA === 0) return null;
+        const titik = [turf.point([k.lonA, k.latA])];
+        if (!isNaN(k.latB) && !isNaN(k.lonB) && k.latB !== 0) titik.push(turf.point([k.lonB, k.latB]));
+        const poligon = cariPolygonLP2B(lp2b, titik);
+        const nama = namaFileAman(r["Nama Poktan"]);
+        const fitur = susunFiturSHP(poligon, ambilTitikRute(r, k.latA, k.lonA, k.latB, k.lonB), propsDariRow(r));
+        return { name: "SHP_" + nama + ".zip", data: buatShpBase64(fitur, nama) };
+    }
+
+    function unduhBase64Zip(b64, namaFile) {
+        const bin = atob(b64);
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        const url = URL.createObjectURL(new Blob([arr], { type: 'application/zip' }));
+        const a = document.createElement('a');
+        a.href = url; a.download = namaFile;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    async function downloadShpPoktan(r) {
+        showStatusModal("Menyiapkan SHP...", "Mengambil poligon LP2B, rute & pin...", true);
+        try {
+            const lp2b = await muatDataLP2BGlobal();
+            const shp = bangunShpDariRow(r, lp2b);
+            document.getElementById('statusModal').style.display = 'none';
+            if (!shp) { alert("Koordinat poktan tidak valid."); return; }
+            unduhBase64Zip(shp.data, shp.name);
+        } catch (e) {
+            document.getElementById('statusModal').style.display = 'none';
+            console.error(e);
+            alert("Gagal membuat file SHP.");
+        }
+    }
+
+    // Sekali jalan: buat SHP untuk data lama yang kolom "File SHP"-nya masih kosong, simpan ke Drive
+    async function lengkapiShpDataLama() {
+        const pwd = prompt("Masukkan Password Admin:");
+        if (pwd === null) return;
+        if (pwd !== "Admin123") { alert("Password Salah!"); return; }
+        if (!masterDataPoktan.length) { alert("Data poktan belum termuat."); return; }
+        const target = masterDataPoktan.filter(r => !r["File SHP"] && r["_row"]);
+        if (target.length === 0) { alert("Semua data sudah punya File SHP."); return; }
+        if (!confirm(target.length + " data belum punya File SHP. Buat dan simpan ke Google Drive sekarang?")) return;
+
+        let ok = 0, lewati = 0, gagal = 0;
+        const lp2b = await muatDataLP2BGlobal();
+        for (let i = 0; i < target.length; i++) {
+            const r = target[i];
+            showStatusModal("Membuat SHP...", "(" + (i + 1) + "/" + target.length + ") " + (r["Nama Poktan"] || ""), true);
+            try {
+                const shp = bangunShpDariRow(r, lp2b);
+                if (!shp) { lewati++; continue; }
+                const res = await fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "upload_shp", row: r["_row"], shp: shp }) });
+                const j = await res.json();
+                if (j.status === "success") ok++; else if (j.status === "skipped") lewati++; else gagal++;
+            } catch (e) { console.error(e); gagal++; }
+        }
+        document.getElementById('statusModal').style.display = 'none';
+        alert("Selesai. Berhasil: " + ok + ", dilewati: " + lewati + ", gagal: " + gagal);
+        muatDaftarPoktanKeFolder();
+    }
+
     async function tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB) {
         listRuteLayer.clearLayers();
         
-        let pointsToFit = [[latA, lonA]];
-        if (!isNaN(latB) && !isNaN(lonB) && latB !== 0) {
-            pointsToFit.push([latB, lonB]);
-            L.polyline([[latA, lonA], [latB, lonB]], {
+        const rutePts = ambilTitikRute(r, latA, lonA, latB, lonB);
+        let pointsToFit = rutePts.slice();
+        if (rutePts.length >= 2) {
+            L.polyline(rutePts, {
                 color: '#e74c3c',
                 weight: 5,
                 opacity: 0.8
@@ -892,7 +1059,7 @@
         const filtered = masterDataPoktan.filter(r => {
             const namaP = (r["Nama Poktan"] || "").toLowerCase();
             const namaK = (r["Nama Ketua"] || "").toLowerCase();
-            const noHp = (r["No HP Ketua"] || "").toLowerCase();
+            const noHp = (ambilNoHp(r) || "").toLowerCase();
             const kec = (r["Kecamatan"] || "").toLowerCase();
             const desa = (r["Desa"] || "").toLowerCase();
             return namaP.includes(keyword) || namaK.includes(keyword) || noHp.includes(keyword) || kec.includes(keyword) || desa.includes(keyword);
@@ -1128,6 +1295,22 @@
 
             document.getElementById('statusModal').style.display = 'none';
             if (inA && inB) {
+                shpFilePayload = null;
+                try {
+                    const poligonValid = cariPolygonLP2B(lp2b, [ptA, ptB]);
+                    const namaAman = namaFileAman(document.getElementById('nama_poktan').value);
+                    const propsForm = {
+                        Poktan: document.getElementById('nama_poktan').value,
+                        Ketua: document.getElementById('nama_ketua').value,
+                        Kecamatan: document.getElementById('kecamatan').value,
+                        Desa: document.getElementById('desa').value,
+                        Tahun: document.getElementById('tahun').value,
+                        Luas_Ha: document.getElementById('luas_lahan').value,
+                        Panjang: document.getElementById('lbl-panjang').innerText
+                    };
+                    const fiturForm = susunFiturSHP(poligonValid, ll.map(p => [p.lat, p.lng]), propsForm);
+                    shpFilePayload = { name: "SHP_" + namaAman + ".zip", data: buatShpBase64(fiturForm, namaAman) };
+                } catch (e) { console.error("Gagal membuat SHP:", e); }
                 if (confirm("✅ Titik valid dalam LP2B! Kirim data sekarang?")) kirimDataKeBackend();
             } else {
                 alert("❌ Ditolak: Titik awal/akhir harus di dalam kawasan LP2B.");
@@ -1170,6 +1353,8 @@
             lon_akhir: document.getElementById('lon_akhir').value,
             panjang_jalan: document.getElementById('lbl-panjang').innerText,
             proposal: proposalFilePayload,
+            shp: shpFilePayload,
+            rute: polylineRute ? polylineRute.getLatLngs().map(p => p.lat.toFixed(6) + "," + p.lng.toFixed(6)).join(";") : "",
             foto_sawah: photosSawah,
             foto_jalan: photosJalan
         };
@@ -1182,7 +1367,7 @@
                 document.getElementById('mainForm').reset();
                 isiOpsiTahun();
                 resetRutePetaForm();
-                photosSawah = []; photosJalan = []; proposalFilePayload = null;
+                photosSawah = []; photosJalan = []; proposalFilePayload = null; shpFilePayload = null;
                 document.getElementById('previewSawahGrid').innerHTML = '';
                 document.getElementById('previewJalanGrid').innerHTML = '';
                 document.getElementById('fileProposalInfo').innerText = '';
