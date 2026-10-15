@@ -14,7 +14,8 @@
     <!-- PUSTAKA JSZIP & TURF.JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mapbox/shp-write@0.4.3/dist/shpwrite.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mapbox/shp-write/shpwrite.js"></script>
+    <script>window.shpwrite || document.write('<script src="https://unpkg.com/@mapbox/shp-write@latest/shpwrite.js"><\/script>');</script>
 
     <style>
         :root {
@@ -565,7 +566,7 @@
     let masterDataPoktan = [];
     let proposalFilePayload = null;
     let shpFilePayload = null;
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2FPJ1x525JFAivpXFQbGWWHlyPXIhSRHyFWfArlIg2nzmpxW-c8LX5yi4TkKOYmQ0/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwwx2aDQA9OOt3h_c4031O2q854CPY1s8RbW0DZ8fU4ZyeY_mFi8ELDTA3bau73S3W/exec";
 
     function bukaHalaman(pageId, pushToHistory = true) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
@@ -905,7 +906,12 @@
     }
 
     // Menyusun fitur: poligon LP2B + garis rute + pin awal/akhir (nama field DBF maks 10 karakter)
-    function susunFiturSHP(poligon, titikRute, props) {
+    function susunFiturSHP(poligon, titikRute, propsAsli) {
+        const props = {};
+        Object.keys(propsAsli).forEach(k => {
+            const v = propsAsli[k];
+            props[k] = (v === undefined || v === null || String(v).trim() === "") ? "-" : String(v);
+        });
         const fitur = [];
         poligon.forEach(f => fitur.push({ type: 'Feature', properties: Object.assign({}, props, { Jenis: 'LP2B' }), geometry: f.geometry }));
         if (titikRute.length >= 2) {
@@ -925,12 +931,15 @@
     }
 
     function buatShpBase64(fitur, nama) {
-        return shpwrite.zip({ type: 'FeatureCollection', features: fitur }, {
+        if (typeof shpwrite === 'undefined') throw new Error("Pustaka pembuat SHP gagal dimuat (cek koneksi internet lalu refresh halaman).");
+        const hasilZip = shpwrite.zip({ type: 'FeatureCollection', features: fitur }, {
             outputType: 'base64',
             compression: 'DEFLATE',
             folder: nama,
             types: { polygon: 'LP2B_' + nama, line: 'Rute_' + nama, point: 'Pin_' + nama }
         });
+        if (typeof hasilZip !== 'string') throw new Error("Format hasil zip tidak dikenali.");
+        return hasilZip;
     }
 
     function propsDariRow(r) {
@@ -978,7 +987,7 @@
         } catch (e) {
             document.getElementById('statusModal').style.display = 'none';
             console.error(e);
-            alert("Gagal membuat file SHP.");
+            alert("Gagal membuat file SHP.\n\nDetail: " + (e && e.message ? e.message : e));
         }
     }
 
