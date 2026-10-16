@@ -571,7 +571,7 @@
     let masterDataPoktan = [];
     let proposalFilePayload = null;
     let shpFilePayload = null;
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwwx2aDQA9OOt3h_c4031O2q854CPY1s8RbW0DZ8fU4ZyeY_mFi8ELDTA3bau73S3W/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyulfFcZBQrolfTGBHNB8JZoJ0BhpRaYDUlxP1asr8-MLC72gBVedCbR-oUCjGAdXTY/exec";
 
     function bukaHalaman(pageId, pushToHistory = true) {
         document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
@@ -905,7 +905,10 @@
 
     // ================= EKSPOR SHP (POLIGON LP2B + RUTE + PIN) =================
     function ambilNoHp(r) {
-        return String(r["Nomor Hp ketua"] || r["No HP Ketua"] || "");
+        let hp = String(r["Nomor Hp ketua"] || r["No HP Ketua"] || "").trim();
+        // Spreadsheet sering membuang angka 0 di depan (0822... jadi 822...) -> dikembalikan saat ditampilkan
+        if (/^8\d{8,11}$/.test(hp)) hp = "0" + hp;
+        return hp;
     }
 
     function namaFileAman(teks) {
