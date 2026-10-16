@@ -930,16 +930,29 @@
         return fitur;
     }
 
-    function buatShpBase64(fitur, nama) {
+    // Hasil shpwrite.zip bisa berupa string base64 (versi lama) atau Promise (versi baru) -> ditangani dua-duanya
+    async function buatShpBase64(fitur, nama) {
         if (typeof shpwrite === 'undefined') throw new Error("Pustaka pembuat SHP gagal dimuat (cek koneksi internet lalu refresh halaman).");
-        const hasilZip = shpwrite.zip({ type: 'FeatureCollection', features: fitur }, {
+        let hasil = shpwrite.zip({ type: 'FeatureCollection', features: fitur }, {
             outputType: 'base64',
             compression: 'DEFLATE',
             folder: nama,
             types: { polygon: 'LP2B_' + nama, line: 'Rute_' + nama, point: 'Pin_' + nama }
         });
-        if (typeof hasilZip !== 'string') throw new Error("Format hasil zip tidak dikenali.");
-        return hasilZip;
+        if (hasil && typeof hasil.then === 'function') hasil = await hasil;
+        if (typeof hasil === 'string') return hasil;
+
+        // Cadangan: kalau yang keluar Blob / ArrayBuffer / Uint8Array, ubah sendiri ke base64
+        let bytes = null;
+        if (typeof Blob !== 'undefined' && hasil instanceof Blob) bytes = new Uint8Array(await hasil.arrayBuffer());
+        else if (hasil instanceof ArrayBuffer) bytes = new Uint8Array(hasil);
+        else if (hasil && hasil.buffer instanceof ArrayBuffer) bytes = new Uint8Array(hasil.buffer, hasil.byteOffset || 0, hasil.byteLength);
+        if (bytes) {
+            let bin = "";
+            for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+            return btoa(bin);
+        }
+        throw new Error("Format hasil zip tidak dikenali (" + Object.prototype.toString.call(hasil) + ").");
     }
 
     function propsDariRow(r) {
@@ -954,7 +967,7 @@
         };
     }
 
-    function bangunShpDariRow(r, lp2b) {
+    async function bangunShpDariRow(r, lp2b) {
         const k = bacaKoordinatRow(r);
         if (isNaN(k.latA) || isNaN(k.lonA) || k.latA === 0) return null;
         const titik = [turf.point([k.lonA, k.latA])];
@@ -962,7 +975,7 @@
         const poligon = cariPolygonLP2B(lp2b, titik);
         const nama = namaFileAman(r["Nama Poktan"]);
         const fitur = susunFiturSHP(poligon, ambilTitikRute(r, k.latA, k.lonA, k.latB, k.lonB), propsDariRow(r));
-        return { name: "SHP_" + nama + ".zip", data: buatShpBase64(fitur, nama) };
+        return { name: "SHP_" + nama + ".zip", data: await buatShpBase64(fitur, nama) };
     }
 
     function unduhBase64Zip(b64, namaFile) {
@@ -980,7 +993,7 @@
         showStatusModal("Menyiapkan SHP...", "Mengambil poligon LP2B, rute & pin...", true);
         try {
             const lp2b = await muatDataLP2BGlobal();
-            const shp = bangunShpDariRow(r, lp2b);
+            const shp = await bangunShpDariRow(r, lp2b);
             document.getElementById('statusModal').style.display = 'none';
             if (!shp) { alert("Koordinat poktan tidak valid."); return; }
             unduhBase64Zip(shp.data, shp.name);
@@ -1007,7 +1020,7 @@
             const r = target[i];
             showStatusModal("Membuat SHP...", "(" + (i + 1) + "/" + target.length + ") " + (r["Nama Poktan"] || ""), true);
             try {
-                const shp = bangunShpDariRow(r, lp2b);
+                const shp = await bangunShpDariRow(r, lp2b);
                 if (!shp) { lewati++; continue; }
                 const res = await fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "upload_shp", row: r["_row"], shp: shp }) });
                 const j = await res.json();
@@ -1318,7 +1331,7 @@
                         Panjang: document.getElementById('lbl-panjang').innerText
                     };
                     const fiturForm = susunFiturSHP(poligonValid, ll.map(p => [p.lat, p.lng]), propsForm);
-                    shpFilePayload = { name: "SHP_" + namaAman + ".zip", data: buatShpBase64(fiturForm, namaAman) };
+                    shpFilePayload = { name: "SHP_" + namaAman + ".zip", data: await buatShpBase64(fiturForm, namaAman) };
                 } catch (e) { console.error("Gagal membuat SHP:", e); }
                 if (confirm("✅ Titik valid dalam LP2B! Kirim data sekarang?")) kirimDataKeBackend();
             } else {
