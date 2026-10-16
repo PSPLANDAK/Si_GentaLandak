@@ -930,6 +930,71 @@
         return fitur;
     }
 
+    // Menulis .shp dan .shx untuk 1 garis (1 part) secara manual, format Shapefile ESRI (tipe 3 = PolyLine)
+    function bangunPolylineShp(koord) {
+        const n = koord.length;
+        let xmin = Infinity, ymin = Infinity, xmax = -Infinity, ymax = -Infinity;
+        koord.forEach(p => {
+            if (p[0] < xmin) xmin = p[0]; if (p[0] > xmax) xmax = p[0];
+            if (p[1] < ymin) ymin = p[1]; if (p[1] > ymax) ymax = p[1];
+        });
+        const isiBytes = 48 + 16 * n;                 // panjang isi 1 record
+        const shpBytes = 100 + 8 + isiBytes;
+        const shp = new Uint8Array(shpBytes), v = new DataView(shp.buffer);
+        v.setInt32(0, 9994, false);                   // kode file
+        v.setInt32(24, shpBytes / 2, false);          // panjang file (dalam word 16-bit)
+        v.setInt32(28, 1000, true);                   // versi
+        v.setInt32(32, 3, true);                      // tipe: PolyLine
+        v.setFloat64(36, xmin, true); v.setFloat64(44, ymin, true);
+        v.setFloat64(52, xmax, true); v.setFloat64(60, ymax, true);
+        v.setInt32(100, 1, false);                    // nomor record
+        v.setInt32(104, isiBytes / 2, false);         // panjang isi record (word)
+        v.setInt32(108, 3, true);                     // tipe shape
+        v.setFloat64(112, xmin, true); v.setFloat64(120, ymin, true);
+        v.setFloat64(128, xmax, true); v.setFloat64(136, ymax, true);
+        v.setInt32(144, 1, true);                     // jumlah part
+        v.setInt32(148, n, true);                     // jumlah titik
+        v.setInt32(152, 0, true);                     // part pertama mulai di titik 0
+        koord.forEach((p, i) => { v.setFloat64(156 + 16 * i, p[0], true); v.setFloat64(164 + 16 * i, p[1], true); });
+
+        const shx = new Uint8Array(108), x = new DataView(shx.buffer);
+        x.setInt32(0, 9994, false);
+        x.setInt32(24, 108 / 2, false);
+        x.setInt32(28, 1000, true);
+        x.setInt32(32, 3, true);
+        x.setFloat64(36, xmin, true); x.setFloat64(44, ymin, true);
+        x.setFloat64(52, xmax, true); x.setFloat64(60, ymax, true);
+        x.setInt32(100, 100 / 2, false);              // posisi record di .shp (word)
+        x.setInt32(104, isiBytes / 2, false);         // panjang isi record
+        return { shp, shx };
+    }
+
+
+    // shp-write menulis garis (POLYLINE) dengan struktur rusak (jumlah part & indeks titik salah) sehingga garis tidak tampil di QGIS.
+    // Solusi: setelah zip jadi, ganti .shp & .shx milik layer garis dengan hasil tulisan sendiri. Poligon & pin tidak diubah.
+    async function perbaikiGarisShp(b64, fitur) {
+        const garis = fitur.find(f => f.geometry && f.geometry.type === 'LineString' && f.geometry.coordinates.length >= 2);
+        if (!garis || typeof JSZip === 'undefined') return b64;
+        try {
+            const zip = await JSZip.loadAsync(b64, { base64: true });
+            const daftarShp = Object.keys(zip.files).filter(n => /\.shp$/i.test(n));
+            let diganti = false;
+            for (const n of daftarShp) {
+                const buf = await zip.file(n).async('uint8array');
+                if (buf.length < 36 || new DataView(buf.buffer, buf.byteOffset, buf.byteLength).getInt32(32, true) !== 3) continue;
+                const hasil = bangunPolylineShp(garis.geometry.coordinates);
+                zip.file(n, hasil.shp);
+                zip.file(n.replace(/\.shp$/i, '.shx'), hasil.shx);
+                diganti = true;
+            }
+            if (!diganti) return b64;
+            return await zip.generateAsync({ type: 'base64', compression: 'DEFLATE' });
+        } catch (e) {
+            console.warn("Perbaikan garis SHP gagal, memakai hasil asli:", e);
+            return b64;
+        }
+    }
+
     // Hasil shpwrite.zip bisa berupa string base64 (versi lama) atau Promise (versi baru) -> ditangani dua-duanya
     async function buatShpBase64(fitur, nama) {
         if (typeof shpwrite === 'undefined') throw new Error("Pustaka pembuat SHP gagal dimuat (cek koneksi internet lalu refresh halaman).");
@@ -937,22 +1002,21 @@
             outputType: 'base64',
             compression: 'DEFLATE',
             folder: nama,
-            types: { polygon: 'LP2B_' + nama, line: 'Rute_' + nama, point: 'Pin_' + nama }
+            types: { polygon: 'LP2B_' + nama, polyline: 'Rute_' + nama, point: 'Pin_' + nama }
         });
         if (hasil && typeof hasil.then === 'function') hasil = await hasil;
-        if (typeof hasil === 'string') return hasil;
-
-        // Cadangan: kalau yang keluar Blob / ArrayBuffer / Uint8Array, ubah sendiri ke base64
-        let bytes = null;
-        if (typeof Blob !== 'undefined' && hasil instanceof Blob) bytes = new Uint8Array(await hasil.arrayBuffer());
-        else if (hasil instanceof ArrayBuffer) bytes = new Uint8Array(hasil);
-        else if (hasil && hasil.buffer instanceof ArrayBuffer) bytes = new Uint8Array(hasil.buffer, hasil.byteOffset || 0, hasil.byteLength);
-        if (bytes) {
+        if (typeof hasil !== 'string') {
+            // Cadangan: kalau yang keluar Blob / ArrayBuffer / Uint8Array, ubah sendiri ke base64
+            let bytes = null;
+            if (typeof Blob !== 'undefined' && hasil instanceof Blob) bytes = new Uint8Array(await hasil.arrayBuffer());
+            else if (hasil instanceof ArrayBuffer) bytes = new Uint8Array(hasil);
+            else if (hasil && hasil.buffer instanceof ArrayBuffer) bytes = new Uint8Array(hasil.buffer, hasil.byteOffset || 0, hasil.byteLength);
+            if (!bytes) throw new Error("Format hasil zip tidak dikenali (" + Object.prototype.toString.call(hasil) + ").");
             let bin = "";
             for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-            return btoa(bin);
+            hasil = btoa(bin);
         }
-        throw new Error("Format hasil zip tidak dikenali (" + Object.prototype.toString.call(hasil) + ").");
+        return await perbaikiGarisShp(hasil, fitur);
     }
 
     function propsDariRow(r) {
