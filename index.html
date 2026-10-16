@@ -199,7 +199,12 @@
             text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        /* AKORDEON FOLDER KECAMATAN & DESA */
+        /* AKORDEON FOLDER TAHUN, KECAMATAN & DESA */
+        .folder-tahun { border: 1px solid #c9d6ea; border-radius: 6px; margin-bottom: 6px; overflow: hidden; background: #fff; }
+        .folder-tahun-header { background: #dfe9f7; padding: 10px 12px; font-weight: bold; font-size: 13.5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--primary); }
+        .folder-tahun-header:hover { background: #d0def2; }
+        .folder-tahun-body { display: none; padding: 6px; background: #f6f9fd; }
+
         .folder-kecamatan { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; overflow: hidden; background: #fff; }
         .folder-kecamatan-header { background: #f1f2f6; padding: 10px 12px; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--primary); }
         .folder-kecamatan-header:hover { background: #e4e7eb; }
@@ -759,109 +764,142 @@
             return;
         }
 
+        // Susunan folder: Tahun > Kecamatan > Desa > Poktan
         let grouped = {};
         dataArray.forEach(item => {
+            const thn = String(item["Tahun"] || "").trim() || "Tanpa Tahun";
             const kec = item["Kecamatan"] || "Lainnya";
             const desa = item["Desa"] || "Lainnya";
-            if (!grouped[kec]) grouped[kec] = {};
-            if (!grouped[kec][desa]) grouped[kec][desa] = [];
-            grouped[kec][desa].push(item);
+            if (!grouped[thn]) grouped[thn] = {};
+            if (!grouped[thn][kec]) grouped[thn][kec] = {};
+            if (!grouped[thn][kec][desa]) grouped[thn][kec][desa] = [];
+            grouped[thn][kec][desa].push(item);
         });
 
-        Object.keys(grouped).sort().forEach(kec => {
-            const kecDiv = document.createElement('div');
-            kecDiv.className = 'folder-kecamatan';
+        // Tahun terbaru di atas, "Tanpa Tahun" paling bawah
+        const urutTahun = Object.keys(grouped).sort((a, b) => {
+            if (a === "Tanpa Tahun") return 1;
+            if (b === "Tanpa Tahun") return -1;
+            return b.localeCompare(a, undefined, { numeric: true });
+        });
 
-            const countKec = Object.values(grouped[kec]).reduce((a, b) => a + b.length, 0);
-            
-            const kecHeader = document.createElement('div');
-            kecHeader.className = 'folder-kecamatan-header';
-            kecHeader.innerHTML = `<span>📁 Kec. ${kec} (${countKec})</span><span>▼</span>`;
-            
-            const kecBody = document.createElement('div');
-            kecBody.className = 'folder-kecamatan-body';
+        urutTahun.forEach(thn => {
+            const tahunDiv = document.createElement('div');
+            tahunDiv.className = 'folder-tahun';
 
-            kecHeader.onclick = () => {
-                kecBody.style.display = kecBody.style.display === 'block' ? 'none' : 'block';
-                kecHeader.querySelector('span:last-child').innerText = kecBody.style.display === 'block' ? '▲' : '▼';
+            const countTahun = Object.values(grouped[thn]).reduce((a, kecObj) => a + Object.values(kecObj).reduce((x, y) => x + y.length, 0), 0);
+
+            const tahunHeader = document.createElement('div');
+            tahunHeader.className = 'folder-tahun-header';
+            tahunHeader.innerHTML = `<span>🗂 ${thn === "Tanpa Tahun" ? thn : "Tahun " + thn} (${countTahun})</span><span>▼</span>`;
+
+            const tahunBody = document.createElement('div');
+            tahunBody.className = 'folder-tahun-body';
+
+            tahunHeader.onclick = () => {
+                tahunBody.style.display = tahunBody.style.display === 'block' ? 'none' : 'block';
+                tahunHeader.querySelector('span:last-child').innerText = tahunBody.style.display === 'block' ? '▲' : '▼';
             };
 
-            Object.keys(grouped[kec]).sort().forEach(desa => {
-                const desaDiv = document.createElement('div');
-                desaDiv.className = 'folder-desa';
+            Object.keys(grouped[thn]).sort().forEach(kec => {
+                const kecDiv = document.createElement('div');
+                kecDiv.className = 'folder-kecamatan';
 
-                const listDesaItem = grouped[kec][desa];
-                const desaHeader = document.createElement('div');
-                desaHeader.className = 'folder-desa-header';
-                desaHeader.innerHTML = `<span>📂 Desa ${desa} (${listDesaItem.length})</span><span>▼</span>`;
+                const countKec = Object.values(grouped[thn][kec]).reduce((a, b) => a + b.length, 0);
+            
+                const kecHeader = document.createElement('div');
+                kecHeader.className = 'folder-kecamatan-header';
+                kecHeader.innerHTML = `<span>📁 Kec. ${kec} (${countKec})</span><span>▼</span>`;
+            
+                const kecBody = document.createElement('div');
+                kecBody.className = 'folder-kecamatan-body';
 
-                const desaBody = document.createElement('div');
-                desaBody.className = 'folder-desa-body';
-
-                desaHeader.onclick = () => {
-                    desaBody.style.display = desaBody.style.display === 'flex' ? 'none' : 'flex';
-                    desaHeader.querySelector('span:last-child').innerText = desaBody.style.display === 'flex' ? '▲' : '▼';
+                kecHeader.onclick = () => {
+                    kecBody.style.display = kecBody.style.display === 'block' ? 'none' : 'block';
+                    kecHeader.querySelector('span:last-child').innerText = kecBody.style.display === 'block' ? '▲' : '▼';
                 };
 
-                listDesaItem.forEach(r => {
-                    const coordAwal = r["Lat/Lon Awal"] || "";
-                    const coordAkhir = r["Lat/Lon Akhir"] || "";
-                    
-                    let latA = 0, lonA = 0, latB = 0, lonB = 0;
-                    
-                    if (coordAwal.includes(",")) {
-                        const pA = coordAwal.split(",");
-                        latA = parseFloat(pA[0]); lonA = parseFloat(pA[1]);
-                    }
-                    
-                    if (coordAkhir && coordAkhir.includes(",")) {
-                        const pB = coordAkhir.split(",");
-                        latB = parseFloat(pB[0]); lonB = parseFloat(pB[1]);
-                    }
+                Object.keys(grouped[thn][kec]).sort().forEach(desa => {
+                    const desaDiv = document.createElement('div');
+                    desaDiv.className = 'folder-desa';
 
-                    if (!isNaN(latA) && !isNaN(lonA) && latA !== 0) {
-                        const marker = L.marker([latA, lonA]).addTo(listMarkersGroup);
-                        
-                        marker.on('click', () => {
-                            tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB);
-                        });
+                    const listDesaItem = grouped[thn][kec][desa];
+                    const desaHeader = document.createElement('div');
+                    desaHeader.className = 'folder-desa-header';
+                    desaHeader.innerHTML = `<span>📂 Desa ${desa} (${listDesaItem.length})</span><span>▼</span>`;
 
-                        marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>No HP: ${ambilNoHp(r) || "-"}<br>Kec: ${kec} | Desa: ${desa}<br><small style="color:var(--primary);">Klik untuk muat rute & poligon LP2B</small>`);
-                    }
+                    const desaBody = document.createElement('div');
+                    desaBody.className = 'folder-desa-body';
 
-                    const row = document.createElement('div');
-                    row.className = 'poktan-item-row';
-                    row.innerHTML = `
-                        <div class="poktan-item-info">
-                            <strong style="font-size: 12.5px; color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
-                            <span style="font-size: 11px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"} (${ambilNoHp(r) || "-"})</span>
-                        </div>
-                    `;
-                    const btnShp = document.createElement('button');
-                    btnShp.type = 'button';
-                    btnShp.className = 'btn-dl-shp';
-                    btnShp.title = 'Download SHP poligon LP2B';
-                    btnShp.innerText = '⬇ SHP';
-                    btnShp.onclick = (ev) => { ev.stopPropagation(); downloadShpPoktan(r); };
-                    row.appendChild(btnShp);
-                    row.onclick = () => {
-                        if (!isNaN(latA) && !isNaN(lonA) && latA !== 0) {
-                            tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB);
-                        } else {
-                            alert("Koordinat tidak valid.");
-                        }
+                    desaHeader.onclick = () => {
+                        desaBody.style.display = desaBody.style.display === 'flex' ? 'none' : 'flex';
+                        desaHeader.querySelector('span:last-child').innerText = desaBody.style.display === 'flex' ? '▲' : '▼';
                     };
-                    desaBody.appendChild(row);
+
+                    listDesaItem.forEach(r => {
+                        const coordAwal = r["Lat/Lon Awal"] || "";
+                        const coordAkhir = r["Lat/Lon Akhir"] || "";
+                    
+                        let latA = 0, lonA = 0, latB = 0, lonB = 0;
+                    
+                        if (coordAwal.includes(",")) {
+                            const pA = coordAwal.split(",");
+                            latA = parseFloat(pA[0]); lonA = parseFloat(pA[1]);
+                        }
+                    
+                        if (coordAkhir && coordAkhir.includes(",")) {
+                            const pB = coordAkhir.split(",");
+                            latB = parseFloat(pB[0]); lonB = parseFloat(pB[1]);
+                        }
+
+                        if (!isNaN(latA) && !isNaN(lonA) && latA !== 0) {
+                            const marker = L.marker([latA, lonA]).addTo(listMarkersGroup);
+                        
+                            marker.on('click', () => {
+                                tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB);
+                            });
+
+                            marker.bindPopup(`<b>${r["Nama Poktan"] || "Poktan"}</b><br>Ketua: ${r["Nama Ketua"] || "-"}<br>No HP: ${ambilNoHp(r) || "-"}<br>Tahun: ${thn} | Kec: ${kec} | Desa: ${desa}<br><small style="color:var(--primary);">Klik untuk muat rute & poligon LP2B</small>`);
+                        }
+
+                        const row = document.createElement('div');
+                        row.className = 'poktan-item-row';
+                        row.innerHTML = `
+                            <div class="poktan-item-info">
+                                <strong style="font-size: 12.5px; color: var(--primary);">${r["Nama Poktan"] || "Tanpa Nama"}</strong>
+                                <span style="font-size: 11px; color: #555;">Ketua: ${r["Nama Ketua"] || "-"} (${ambilNoHp(r) || "-"})</span>
+                            </div>
+                        `;
+                        const btnShp = document.createElement('button');
+                        btnShp.type = 'button';
+                        btnShp.className = 'btn-dl-shp';
+                        btnShp.title = 'Download SHP poligon LP2B';
+                        btnShp.innerText = '⬇ SHP';
+                        btnShp.onclick = (ev) => { ev.stopPropagation(); downloadShpPoktan(r); };
+                        row.appendChild(btnShp);
+                        row.onclick = () => {
+                            if (!isNaN(latA) && !isNaN(lonA) && latA !== 0) {
+                                tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB);
+                            } else {
+                                alert("Koordinat tidak valid.");
+                            }
+                        };
+                        desaBody.appendChild(row);
+                    });
+
+                    desaDiv.appendChild(desaHeader);
+                    desaDiv.appendChild(desaBody);
+                    kecBody.appendChild(desaDiv);
                 });
 
-                desaDiv.appendChild(desaHeader);
-                desaDiv.appendChild(desaBody);
-                kecBody.appendChild(desaDiv);
+                kecDiv.appendChild(kecHeader);
+                kecDiv.appendChild(kecBody);
+                tahunBody.appendChild(kecDiv);
             });
 
-            kecDiv.appendChild(kecHeader);
-            kecDiv.appendChild(kecBody);
-            container.appendChild(kecDiv);
+            tahunDiv.appendChild(tahunHeader);
+            tahunDiv.appendChild(tahunBody);
+            container.appendChild(tahunDiv);
         });
     }
 
@@ -1148,7 +1186,8 @@
             const noHp = (ambilNoHp(r) || "").toLowerCase();
             const kec = (r["Kecamatan"] || "").toLowerCase();
             const desa = (r["Desa"] || "").toLowerCase();
-            return namaP.includes(keyword) || namaK.includes(keyword) || noHp.includes(keyword) || kec.includes(keyword) || desa.includes(keyword);
+            const thn = String(r["Tahun"] || "").toLowerCase();
+            return namaP.includes(keyword) || namaK.includes(keyword) || noHp.includes(keyword) || kec.includes(keyword) || desa.includes(keyword) || thn.includes(keyword);
         });
         renderFolderStruktur(filtered);
     }
