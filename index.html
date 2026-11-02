@@ -182,7 +182,7 @@
         #mapList { width: 100%; height: 100%; }
 
         .list-floating-panel {
-            position: absolute; top: calc(env(safe-area-inset-top) + 65px); left: 15px; right: 15px; z-index: 1000;
+            position: absolute; top: calc(env(safe-area-inset-top) + 65px); left: 15px; right: 15px; z-index: 1100;
             background: white; padding: 15px; border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: auto; max-width: 400px;
             display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px);
@@ -201,7 +201,7 @@
         .list-sheet-top { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
         .list-scroll-area {
             flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain; display: flex; flex-direction: column; gap: 4px;
+            overscroll-behavior: contain; touch-action: pan-y; display: flex; flex-direction: column; gap: 4px;
             padding-right: 2px;
         }
         .list-floating-panel.collapsed .list-sheet-top,
@@ -766,7 +766,12 @@
     // ================= PETA HALAMAN 2 =================
     const mapList = L.map('mapList', { zoomControl: false }).setView([0.3847, 109.9532], 11);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' }).addTo(mapList);
-    L.control.zoom({ position: 'bottomright' }).addTo(mapList);
+    L.control.zoom({ position: 'topright' }).addTo(mapList);
+    // Panel daftar berada di atas peta: cegah gesture di panel ikut menggeser/zoom peta
+    (function() {
+        const pnl = document.querySelector('.list-floating-panel');
+        if (pnl && window.L) { L.DomEvent.disableScrollPropagation(pnl); L.DomEvent.disableClickPropagation(pnl); }
+    })();
     let listMarkersGroup = new L.FeatureGroup().addTo(mapList);
     let listLp2bLayer = new L.FeatureGroup().addTo(mapList);
     let listRuteLayer = new L.FeatureGroup().addTo(mapList);
