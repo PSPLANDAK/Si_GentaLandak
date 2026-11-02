@@ -185,9 +185,28 @@
             position: absolute; top: calc(env(safe-area-inset-top) + 65px); left: 15px; right: 15px; z-index: 1000;
             background: white; padding: 15px; border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: auto; max-width: 400px;
-            display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 120px); overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px);
+            overflow: hidden;
         }
+        /* Header panel (judul + pencarian) tetap diam, hanya daftar yang di-scroll */
+        .list-sheet-handle {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            cursor: pointer; flex-shrink: 0; user-select: none;
+        }
+        .list-sheet-handle h4 { margin: 0; color: var(--primary); font-size: 15px; }
+        .list-sheet-toggle {
+            background: #eef1f7; border: none; border-radius: 50%; width: 30px; height: 30px;
+            font-size: 14px; color: var(--primary); cursor: pointer; flex-shrink: 0;
+        }
+        .list-sheet-top { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+        .list-scroll-area {
+            flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain; display: flex; flex-direction: column; gap: 4px;
+            padding-right: 2px;
+        }
+        .list-floating-panel.collapsed .list-sheet-top,
+        .list-floating-panel.collapsed .list-scroll-area { display: none; }
+        .list-floating-panel.collapsed { gap: 0; }
 
         .list-floating-panel input, .list-floating-panel select {
             padding: 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%;
@@ -298,7 +317,19 @@
             .app-wrapper-form { flex-direction: column-reverse; height: auto; min-height: 100vh; position: relative; overflow-y: auto; }
             .sidebar-form { width: 100%; padding: 15px; overflow-y: visible; height: auto; padding-top: 50px; }
             .map-container-form { height: 40vh; min-height: 280px; position: relative; width: 100%; }
-            .check-floating-panel, .list-floating-panel { width: calc(100% - 30px); left: 15px; right: 15px; max-height: 55vh; }
+            .check-floating-panel { width: calc(100% - 30px); left: 15px; right: 15px; max-height: 55vh; }
+            /* Daftar Poktan: bottom sheet, peta tetap terlihat di atas */
+            .list-floating-panel {
+                top: auto; bottom: 0; left: 0; right: 0; width: 100%; max-width: none;
+                max-height: 58vh; max-height: 58dvh;
+                border-radius: 16px 16px 0 0; padding: 10px 14px calc(env(safe-area-inset-bottom) + 12px);
+                box-shadow: 0 -4px 18px rgba(0,0,0,0.25);
+            }
+            .list-sheet-handle::before {
+                content: ''; position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+                width: 40px; height: 4px; border-radius: 2px; background: #cfd3da;
+            }
+            .list-sheet-handle { padding-top: 8px; }
         }
     </style>
 </head>
@@ -368,16 +399,23 @@
     <button class="btn-back-menu" onclick="bukaHalaman('landing-page')">⬅ Menu Utama</button>
     <div class="list-map-container">
         <div class="list-floating-panel">
-            <h4 style="margin: 0 0 4px 0; color: var(--primary);">Daftar & Folder Breakdown Poktan</h4>
-            <input type="text" id="inputPencarianPoktan" placeholder="🔍 Cari nama poktan atau ketua..." oninput="filterDataPoktanWilayah()">
-            <button class="btn-all-pins" onclick="tampilkanSemuaPinDiPeta()">🌐 Tampilkan Semua Pin di Peta</button>
-            <div id="containerFolderPoktan" style="display: flex; flex-direction: column; gap: 4px; max-height: 38vh; overflow-y: auto; -webkit-overflow-scrolling: touch; margin-top: 5px;">
-                <i style="font-size: 12px; color: #888;">Memuat folder data...</i>
+            <div class="list-sheet-handle" onclick="toggleListPanel()">
+                <h4>Daftar & Folder Breakdown Poktan</h4>
+                <button type="button" class="list-sheet-toggle" id="btnToggleListPanel" aria-label="Buka/tutup daftar">▼</button>
             </div>
-            <div class="admin-box-menu">
-                <button class="btn-sheet-link" onclick="aksesSpreadsheetAdmin()">📊 Buka & Download Spreadsheet Data</button>
-                <button class="btn-drive-link" onclick="aksesDriveAdmin()">📁 Buka & Download Master JUT (Google Drive)</button>
-                <button class="btn-drive-link" onclick="lengkapiShpDataLama()">🗂 Lengkapi SHP Data Lama ke Drive</button>
+            <div class="list-sheet-top">
+                <input type="text" id="inputPencarianPoktan" placeholder="🔍 Cari nama poktan atau ketua..." oninput="filterDataPoktanWilayah()">
+                <button class="btn-all-pins" onclick="tampilkanSemuaPinDiPeta()">🌐 Tampilkan Semua Pin di Peta</button>
+            </div>
+            <div class="list-scroll-area">
+                <div id="containerFolderPoktan" style="display: flex; flex-direction: column; gap: 4px;">
+                    <i style="font-size: 12px; color: #888;">Memuat folder data...</i>
+                </div>
+                <div class="admin-box-menu">
+                    <button class="btn-sheet-link" onclick="aksesSpreadsheetAdmin()">📊 Buka & Download Spreadsheet Data</button>
+                    <button class="btn-drive-link" onclick="aksesDriveAdmin()">📁 Buka & Download Master JUT (Google Drive)</button>
+                    <button class="btn-drive-link" onclick="lengkapiShpDataLama()">🗂 Lengkapi SHP Data Lama ke Drive</button>
+                </div>
             </div>
         </div>
         <div id="mapList"></div>
@@ -1137,7 +1175,17 @@
         muatDaftarPoktanKeFolder();
     }
 
+    function toggleListPanel(forceCollapse) {
+        const panel = document.querySelector('.list-floating-panel');
+        if (!panel) return;
+        const collapsed = (typeof forceCollapse === 'boolean') ? forceCollapse : !panel.classList.contains('collapsed');
+        panel.classList.toggle('collapsed', collapsed);
+        document.getElementById('btnToggleListPanel').innerText = collapsed ? '▲' : '▼';
+    }
+
     async function tampilkanDetailDanRutePoktan(r, latA, lonA, latB, lonB) {
+        // Di HP, ciutkan daftar supaya rute & poligon di peta terlihat
+        if (window.innerWidth <= 768) toggleListPanel(true);
         listRuteLayer.clearLayers();
         
         const rutePts = ambilTitikRute(r, latA, lonA, latB, lonB);
